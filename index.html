@@ -15,7 +15,7 @@
   <div class="auth-brand">
     <img class="wordmark-logo" src="img/logo.png" alt="HabitY">
     <div class="tagline">Kichik odatlar, katta o'zgarish. Har kuni bir qadam.</div>
-    <div class="foot-note">Hozircha ma'lumotlar shu brauzerda saqlanadi — hisob tizimi tez orada ulanadi.</div>
+    <div class="foot-note">Google orqali xavfsiz kiring — ma'lumotlaringiz barcha qurilmalarda sinxronlanadi.</div>
   </div>
   <div class="auth-form-wrap">
     <div class="auth-card">
@@ -31,9 +31,9 @@
           <label for="li-pass">Parol</label>
           <input id="li-pass" type="password" placeholder="••••••••">
         </div>
-        <button class="btn btn-primary" onclick="enterApp()">Kirish</button>
+        <button class="btn btn-primary" onclick="alert('Hozircha faqat Google orqali kirish mavjud.')">Kirish</button>
         <div class="auth-divider"><span>yoki</span></div>
-        <button class="btn btn-ghost btn-google" onclick="enterApp()">
+        <button class="btn btn-ghost btn-google" onclick="signInWithGoogle()">
           <svg viewBox="0 0 24 24" width="16" height="16"><path fill="#4285F4" d="M23.5 12.27c0-.85-.08-1.66-.22-2.45H12v4.64h6.47c-.28 1.5-1.13 2.78-2.4 3.63v3h3.87c2.27-2.09 3.56-5.17 3.56-8.82z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.07 7.94-2.9l-3.87-3c-1.08.72-2.45 1.14-4.07 1.14-3.13 0-5.78-2.11-6.73-4.96H1.27v3.1C3.25 21.3 7.31 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.28c-.25-.72-.38-1.49-.38-2.28s.14-1.56.38-2.28V6.62H1.27C.46 8.24 0 10.07 0 12s.46 3.76 1.27 5.38l4-3.1z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.94 1.19 15.24 0 12 0 7.31 0 3.25 2.7 1.27 6.62l4 3.1C6.22 6.86 8.87 4.75 12 4.75z"/></svg>
           Google orqali kirish
         </button>
@@ -55,7 +55,12 @@
           <label for="re-pass">Parol</label>
           <input id="re-pass" type="password" placeholder="••••••••">
         </div>
-        <button class="btn btn-primary" onclick="enterApp()">Ro'yxatdan o'tish</button>
+        <button class="btn btn-primary" onclick="alert('Hozircha faqat Google orqali kirish mavjud.')">Ro'yxatdan o'tish</button>
+        <div class="auth-divider"><span>yoki</span></div>
+        <button class="btn btn-ghost btn-google" onclick="signInWithGoogle()">
+          <svg viewBox="0 0 24 24" width="16" height="16"><path fill="#4285F4" d="M23.5 12.27c0-.85-.08-1.66-.22-2.45H12v4.64h6.47c-.28 1.5-1.13 2.78-2.4 3.63v3h3.87c2.27-2.09 3.56-5.17 3.56-8.82z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.07 7.94-2.9l-3.87-3c-1.08.72-2.45 1.14-4.07 1.14-3.13 0-5.78-2.11-6.73-4.96H1.27v3.1C3.25 21.3 7.31 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.28c-.25-.72-.38-1.49-.38-2.28s.14-1.56.38-2.28V6.62H1.27C.46 8.24 0 10.07 0 12s.46 3.76 1.27 5.38l4-3.1z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.94 1.19 15.24 0 12 0 7.31 0 3.25 2.7 1.27 6.62l4 3.1C6.22 6.86 8.87 4.75 12 4.75z"/></svg>
+          Google orqali kirish
+        </button>
         <p class="auth-switch">Hisobingiz bormi? <button onclick="toggleAuth()">Kirish</button></p>
       </div>
     </div>
@@ -94,10 +99,10 @@
     </nav>
     <div class="sidebar-foot">
       <div class="mini-profile">
-        <div class="avatar">Y</div>
+        <div class="avatar" id="sidebar-avatar">Y</div>
         <div>
-          <div class="name">Yusuf</div>
-          <div class="email">yusuf@habity.uz</div>
+          <div class="name" id="sidebar-name">Yusuf</div>
+          <div class="email" id="sidebar-email">yusuf@habity.uz</div>
         </div>
       </div>
     </div>
@@ -110,7 +115,7 @@
       <div class="page-head">
         <div>
           <div class="eyebrow">Bugun</div>
-          <h1>Xayrli kun, Yusuf</h1>
+          <h1>Xayrli kun, <span class="dash-greeting-name">Yusuf</span></h1>
         </div>
         <div class="today mono" id="today-date"></div>
       </div>
@@ -240,11 +245,11 @@
       </div>
 
       <div class="card profile-head">
-        <div class="avatar">Y</div>
+        <div class="avatar" id="profile-avatar">Y</div>
         <div>
-          <div class="pname">Yusuf</div>
-          <div class="pemail">yusuf@habity.uz</div>
-          <div class="pjoined">Iyul 2026 dan beri a'zo</div>
+          <div class="pname" id="profile-name">Yusuf</div>
+          <div class="pemail" id="profile-email">yusuf@habity.uz</div>
+          <div class="pjoined" id="profile-joined">Iyul 2026 dan beri a'zo</div>
         </div>
       </div>
 
@@ -267,8 +272,8 @@
 
       <div class="card settings-section">
         <h3>Profil ma'lumotlari</h3>
-        <div class="field"><label>Ism</label><input type="text" value="Yusuf"></div>
-        <div class="field" style="margin-bottom:0;"><label>Email</label><input type="email" value="yusuf@habity.uz"></div>
+        <div class="field"><label>Ism</label><input type="text" id="settings-name-input" readonly></div>
+        <div class="field" style="margin-bottom:0;"><label>Email</label><input type="email" id="settings-email-input" readonly></div>
       </div>
 
       <div class="card settings-section">
@@ -307,7 +312,7 @@
         <h3>Xavfli hudud</h3>
         <div class="setting-row">
           <div><div class="stitle">Chiqish</div></div>
-          <button class="btn btn-ghost" onclick="exitApp()">Chiqish</button>
+          <button class="btn btn-ghost" onclick="signOutUser()">Chiqish</button>
         </div>
         <div class="setting-row">
           <div><div class="stitle">Hisobni o'chirish</div><div class="sdesc">Bu amalni ortga qaytarib bo'lmaydi</div></div>
@@ -346,6 +351,6 @@
   </nav>
 </div>
 
-<script src="js/app.js"></script>
+<script type="module" src="js/app.js"></script>
 </body>
 </html>
