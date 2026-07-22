@@ -1,47 +1,147 @@
 // =====================================================
-// HabitY — local state & rendering
-// NOTE: Ma'lumotlar hozircha brauzeringizdagi localStorage'da
-// saqlanadi. Supabase (Google orqali kirish) ulanganda, bu
-// bo'lim haqiqiy bazaga almashtiriladi.
+// HabitY — Firebase Auth (Google) + Firestore sync
 // =====================================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
+import {
+  getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc,
+  onSnapshot, deleteField, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
-const STORAGE_KEY = 'habity_state_v1';
+const firebaseConfig = {
+  apiKey: "AIzaSyDFWsq8IYOC18OZ_01pxXIFyrLvI7GUJ84",
+  authDomain: "habityyy.firebaseapp.com",
+  projectId: "habityyy",
+  storageBucket: "habityyy.firebasestorage.app",
+  messagingSenderId: "915040588600",
+  appId: "1:915040588600:web:324ca55e1867966a9ea7cd",
+  measurementId: "G-T4BW0RNF2Y"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const auth = getAuth(fbApp);
+const db = getFirestore(fbApp);
+const googleProvider = new GoogleAuthProvider();
+
+let currentUser = null;
+let unsubscribers = [];
 let showAddGoalForm = false;
 
-function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function isoDate(d){ return d.toISOString().slice(0,10); }
 function todayISO(){ return isoDate(new Date()); }
 
-function loadState(){
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(raw) return JSON.parse(raw);
-  }catch(e){ console.warn('State could not be loaded', e); }
-  return { habits: [], goals: [], journal: [], darkMode: false };
+function loadDarkPref(){
+  try{ return localStorage.getItem('habity_dark') === '1'; }
+  catch(e){ return false; }
 }
-function saveState(){
-  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-  catch(e){ console.warn('State could not be saved', e); }
+function saveDarkPref(){
+  try{ localStorage.setItem('habity_dark', state.darkMode ? '1' : '0'); }
+  catch(e){ /* ignore */ }
 }
 
-let state = loadState();
+let state = { habits: [], goals: [], journal: [], darkMode: loadDarkPref() };
 
-// ---------- Auth toggle ----------
+// =====================================================
+// AUTH
+// =====================================================
+function signInWithGoogle(){
+  signInWithPopup(auth, googleProvider).catch(err => {
+    console.error('Google sign-in error', err);
+    alert("Kirishda xatolik yuz berdi. Qaytadan urinib ko'ring.");
+  });
+}
+function signOutUser(){
+  signOut(auth).catch(err => console.error('Sign-out error', err));
+}
+
 function toggleAuth(){
   const l = document.getElementById('login-form');
   const r = document.getElementById('register-form');
   l.style.display = l.style.display === 'none' ? 'block' : 'none';
   r.style.display = r.style.display === 'none' ? 'block' : 'none';
 }
-function enterApp(){
-  document.getElementById('auth-screen').style.display = 'none';
-  document.getElementById('app-shell').classList.add('active');
-  renderAll();
+
+function unsubscribeAll(){
+  unsubscribers.forEach(u => { try{ u(); }catch(e){} });
+  unsubscribers = [];
 }
-function exitApp(){
-  document.getElementById('app-shell').classList.remove('active');
-  document.getElementById('auth-screen').style.display = 'flex';
+
+function subscribeToUserData(uid){
+  unsubscribeAll();
+  const habitsCol = collection(db, 'users', uid, 'habits');
+  const journalCol = collection(db, 'users', uid, 'journal');
+  const goalsCol = collection(db, 'users', uid, 'goals');
+
+  unsubscribers.push(onSnapshot(habitsCol, snap => {
+    state.habits = snap.docs.map(d => ({ id: d.id, name: d.data().name || '', logs: d.data().logs || {} }));
+    renderAll();
+  }, err => console.error('Habits sync error', err)));
+
+  unsubscribers.push(onSnapshot(journalCol, snap => {
+    state.journal = snap.docs.map(d => ({ id: d.id, date: d.id, mood: d.data().mood, sleep: d.data().sleep, text: d.data().text || '' }));
+    renderAll();
+  }, err => console.error('Journal sync error', err)));
+
+  unsubscribers.push(onSnapshot(goalsCol, snap => {
+    state.goals = snap.docs.map(d => ({ id: d.id, name: d.data().name || '', deadline: d.data().deadline || '', percent: d.data().percent || 0 }));
+    renderAll();
+  }, err => console.error('Goals sync error', err)));
 }
+
+function applyUserUI(user){
+  const name = user.displayName || 'Foydalanuvchi';
+  const firstName = name.split(' ')[0];
+  const email = user.email || '';
+  const initial = name.charAt(0).toUpperCase();
+  const photo = user.photoURL;
+  const avatarHtml = photo
+    ? `<img src="${photo}" alt="${escapeHtml(name)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
+    : initial;
+
+  const sidebarAvatar = document.getElementById('sidebar-avatar');
+  const sidebarName = document.getElementById('sidebar-name');
+  const sidebarEmail = document.getElementById('sidebar-email');
+  if(sidebarAvatar) sidebarAvatar.innerHTML = avatarHtml;
+  if(sidebarName) sidebarName.textContent = name;
+  if(sidebarEmail) sidebarEmail.textContent = email;
+
+  const profileAvatar = document.getElementById('profile-avatar');
+  const profileName = document.getElementById('profile-name');
+  const profileEmail = document.getElementById('profile-email');
+  const profileJoined = document.getElementById('profile-joined');
+  if(profileAvatar) profileAvatar.innerHTML = avatarHtml;
+  if(profileName) profileName.textContent = name;
+  if(profileEmail) profileEmail.textContent = email;
+  if(profileJoined && user.metadata && user.metadata.creationTime){
+    const joinedStr = new Date(user.metadata.creationTime).toLocaleDateString('uz-UZ', { month: 'long', year: 'numeric' });
+    profileJoined.textContent = joinedStr + " dan beri a'zo";
+  }
+
+  const settingsName = document.getElementById('settings-name-input');
+  const settingsEmail = document.getElementById('settings-email-input');
+  if(settingsName) settingsName.value = name;
+  if(settingsEmail) settingsEmail.value = email;
+
+  document.querySelectorAll('.dash-greeting-name').forEach(el => { el.textContent = firstName; });
+}
+
+onAuthStateChanged(auth, user => {
+  if(user){
+    currentUser = user;
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('app-shell').classList.add('active');
+    applyUserUI(user);
+    subscribeToUserData(user.uid);
+  }else{
+    currentUser = null;
+    unsubscribeAll();
+    state.habits = []; state.goals = []; state.journal = [];
+    document.getElementById('app-shell').classList.remove('active');
+    document.getElementById('auth-screen').style.display = 'flex';
+  }
+});
 
 // ---------- View switching ----------
 function showView(name){
@@ -60,7 +160,7 @@ function applyDarkMode(){
 }
 function toggleDarkMode(){
   state.darkMode = !state.darkMode;
-  saveState();
+  saveDarkPref();
   applyDarkMode();
 }
 
@@ -74,10 +174,8 @@ function refreshDateHeaders(){
 }
 
 // =====================================================
-// HABITS
+// ICONS
 // =====================================================
-const STATUS_CYCLE = [null, 'green', 'yellow', 'red'];
-
 function checkIcon(){
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
 }
@@ -87,7 +185,15 @@ function editIcon(){
 function trashIcon(){
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
 }
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
 
+// =====================================================
+// DATE HELPERS
+// =====================================================
 function lastNDates(n){
   const arr = [];
   for(let i = n-1; i >= 0; i--){
@@ -97,22 +203,36 @@ function lastNDates(n){
   }
   return arr;
 }
+function daysInMonth(year, month){ return new Date(year, month + 1, 0).getDate(); }
+function currentMonthDates(){
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth();
+  const total = daysInMonth(y, m);
+  const arr = [];
+  for(let day = 1; day <= total; day++) arr.push(new Date(y, m, day));
+  return arr;
+}
+
+// =====================================================
+// HABITS
+// =====================================================
+const STATUS_CYCLE = [null, 'green', 'yellow', 'red'];
 
 function cycleStatus(habitId, dateKey){
+  if(!currentUser) return;
   const habit = state.habits.find(h => h.id === habitId);
   if(!habit) return;
   const current = habit.logs[dateKey] || null;
   const idx = STATUS_CYCLE.indexOf(current);
   const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
-  if(next === null) delete habit.logs[dateKey];
-  else habit.logs[dateKey] = next;
-  saveState();
-  renderAll();
+  const ref = doc(db, 'users', currentUser.uid, 'habits', habitId);
+  updateDoc(ref, { [`logs.${dateKey}`]: next === null ? deleteField() : next })
+    .catch(err => console.error('cycleStatus error', err));
 }
 
 function computeCurrentStreak(habit){
   let d = new Date();
-  if(!habit.logs[isoDate(d)]) d.setDate(d.getDate() - 1); // if today not marked yet, start from yesterday
+  if(!habit.logs[isoDate(d)]) d.setDate(d.getDate() - 1);
   let streak = 0;
   while(habit.logs[isoDate(d)] === 'green'){
     streak++;
@@ -139,35 +259,26 @@ function computeLongestStreak(habit){
 
 function addHabit(name){
   const trimmed = (name || '').trim();
-  if(!trimmed) return;
-  state.habits.push({ id: uid(), name: trimmed, logs: {} });
-  saveState();
-  renderAll();
+  if(!trimmed || !currentUser) return;
+  addDoc(collection(db, 'users', currentUser.uid, 'habits'), { name: trimmed, logs: {}, createdAt: serverTimestamp() })
+    .catch(err => alert("Odat qo'shishda xatolik: " + err.message));
 }
 function deleteHabit(id){
+  if(!currentUser) return;
   if(!confirm("Bu odatni o'chirmoqchimisiz? Barcha tarix ham o'chib ketadi.")) return;
-  state.habits = state.habits.filter(h => h.id !== id);
-  saveState();
-  renderAll();
+  deleteDoc(doc(db, 'users', currentUser.uid, 'habits', id)).catch(err => alert('Xatolik: ' + err.message));
 }
 function renameHabit(id, newName){
   const trimmed = (newName || '').trim();
-  const habit = state.habits.find(h => h.id === id);
-  if(!habit) return;
-  if(trimmed) habit.name = trimmed;
-  saveState();
-  renderAll();
+  if(!trimmed || !currentUser) return;
+  updateDoc(doc(db, 'users', currentUser.uid, 'habits', id), { name: trimmed }).catch(err => console.error(err));
 }
-
-function daysInMonth(year, month){ return new Date(year, month + 1, 0).getDate(); }
-
-function currentMonthDates(){
-  const now = new Date();
-  const y = now.getFullYear(), m = now.getMonth();
-  const total = daysInMonth(y, m);
-  const arr = [];
-  for(let day = 1; day <= total; day++) arr.push(new Date(y, m, day));
-  return arr;
+function editHabitName(id){
+  const nameEl = document.querySelector(`.hname[data-id="${id}"]`);
+  if(!nameEl) return;
+  nameEl.setAttribute('contenteditable', 'true');
+  nameEl.focus();
+  document.execCommand && document.execCommand('selectAll', false, null);
 }
 
 function renderHabits(){
@@ -230,21 +341,6 @@ function renderHabits(){
     <tbody>${bodyRows}</tbody>`;
 }
 
-function editHabitName(id){
-  const nameEl = document.querySelector(`.hname[data-id="${id}"]`);
-  if(!nameEl) return;
-  nameEl.setAttribute('contenteditable', 'true');
-  nameEl.focus();
-  document.execCommand && document.execCommand('selectAll', false, null);
-}
-
-
-function escapeHtml(str){
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
-
 // =====================================================
 // STATISTIKA
 // =====================================================
@@ -304,22 +400,17 @@ function renderStats(){
 // =====================================================
 function saveJournalEntry(mood, sleep, text){
   const trimmed = (text || '').trim();
-  if(!trimmed) { alert("Iltimos, avval bugungi kayfiyatingiz haqida bir necha jumla yozing."); return; }
+  if(!trimmed){ alert("Iltimos, avval bugungi kayfiyatingiz haqida bir necha jumla yozing."); return; }
+  if(!currentUser) return;
   const today = todayISO();
-  let entry = state.journal.find(e => e.date === today);
-  if(entry){
-    entry.mood = mood; entry.sleep = sleep; entry.text = trimmed;
-  }else{
-    state.journal.unshift({ id: uid(), date: today, mood, sleep, text: trimmed });
-  }
-  saveState();
-  renderAll();
+  setDoc(doc(db, 'users', currentUser.uid, 'journal', today), {
+    mood, sleep, text: trimmed, updatedAt: serverTimestamp()
+  }, { merge: true }).catch(err => alert('Saqlashda xatolik: ' + err.message));
 }
 function deleteJournalEntry(id){
+  if(!currentUser) return;
   if(!confirm("Bu yozuvni o'chirmoqchimisiz?")) return;
-  state.journal = state.journal.filter(e => e.id !== id);
-  saveState();
-  renderAll();
+  deleteDoc(doc(db, 'users', currentUser.uid, 'journal', id)).catch(err => console.error(err));
 }
 
 function formatEntryDate(iso){
@@ -380,7 +471,7 @@ function wireJournalForms(){
       const text = document.getElementById('dash-journal-textarea').value;
       saveJournalEntry(Number(mood), Number(sleep), text);
       document.getElementById('dash-journal-textarea').value = '';
-      showView('kundalik', document.querySelector('[data-view=kundalik]'));
+      showView('kundalik');
     };
   }
 }
@@ -390,40 +481,44 @@ function wireJournalForms(){
 // =====================================================
 function addGoal(name, deadline){
   const trimmed = (name || '').trim();
-  if(!trimmed) return;
-  state.goals.push({ id: uid(), name: trimmed, deadline: (deadline || '').trim() || 'Muddat belgilanmagan', percent: 0 });
+  if(!trimmed || !currentUser) return;
+  addDoc(collection(db, 'users', currentUser.uid, 'goals'), {
+    name: trimmed, deadline: (deadline || '').trim() || 'Muddat belgilanmagan', percent: 0, createdAt: serverTimestamp()
+  }).catch(err => alert("Maqsad qo'shishda xatolik: " + err.message));
   showAddGoalForm = false;
-  saveState();
-  renderAll();
+  renderGoals();
 }
 function deleteGoal(id){
+  if(!currentUser) return;
   if(!confirm("Bu maqsadni o'chirmoqchimisiz?")) return;
-  state.goals = state.goals.filter(g => g.id !== id);
-  saveState();
-  renderAll();
+  deleteDoc(doc(db, 'users', currentUser.uid, 'goals', id)).catch(err => console.error(err));
 }
 function updateGoalPercent(id, value){
-  const g = state.goals.find(g => g.id === id);
-  if(!g) return;
-  g.percent = Number(value);
-  saveState();
+  if(!currentUser) return;
+  const v = Number(value);
   const card = document.querySelector(`.goal-card[data-id="${id}"]`);
   if(card){
-    card.querySelector('.gpercent').textContent = g.percent + '%';
-    card.querySelector('.progress-fill').style.width = g.percent + '%';
+    card.querySelector('.gpercent').textContent = v + '%';
+    card.querySelector('.progress-fill').style.width = v + '%';
   }
+  updateDoc(doc(db, 'users', currentUser.uid, 'goals', id), { percent: v }).catch(err => console.error(err));
 }
 function renameGoalField(id, field, value){
-  const g = state.goals.find(g => g.id === id);
-  if(!g) return;
+  if(!currentUser) return;
   const trimmed = (value || '').trim();
-  if(trimmed) g[field] = trimmed;
-  saveState();
-  renderAll();
+  if(!trimmed) return;
+  updateDoc(doc(db, 'users', currentUser.uid, 'goals', id), { [field]: trimmed }).catch(err => console.error(err));
 }
 function toggleAddGoalForm(show){
   showAddGoalForm = show;
   renderGoals();
+}
+function makeGoalEditable(id){
+  const card = document.querySelector(`.goal-card[data-id="${id}"]`);
+  if(!card) return;
+  const nameEl = card.querySelector('.gname');
+  nameEl.setAttribute('contenteditable', 'true');
+  nameEl.focus();
 }
 
 function renderGoals(){
@@ -465,13 +560,6 @@ function renderGoals(){
 
   el.innerHTML = cardsHtml + addCardHtml;
 }
-function makeGoalEditable(id){
-  const card = document.querySelector(`.goal-card[data-id="${id}"]`);
-  if(!card) return;
-  const nameEl = card.querySelector('.gname');
-  nameEl.setAttribute('contenteditable', 'true');
-  nameEl.focus();
-}
 
 // =====================================================
 // PROFIL
@@ -505,4 +593,12 @@ function renderAll(){
 
 applyDarkMode();
 refreshDateHeaders();
-renderAll();
+
+// Expose functions referenced by inline HTML onclick/onblur/onkeydown handlers
+// (required because ES module scope doesn't leak to window automatically)
+Object.assign(window, {
+  showView, toggleAuth, signInWithGoogle, signOutUser, toggleDarkMode,
+  cycleStatus, addHabit, deleteHabit, renameHabit, editHabitName,
+  addGoal, deleteGoal, updateGoalPercent, renameGoalField, toggleAddGoalForm, makeGoalEditable,
+  deleteJournalEntry
+});
