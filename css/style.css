@@ -1,611 +1,516 @@
-// =====================================================
-// HabitY — Firebase Auth (Google) + Firestore sync
-// =====================================================
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
-import {
-  getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, updateProfile,
-  onAuthStateChanged, signOut
-} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
-import {
-  getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc,
-  onSnapshot, deleteField, serverTimestamp
-} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyDFWsq8IYOC18OZ_01pxXIFyrLvI7GUJ84",
-  authDomain: "habityyy.firebaseapp.com",
-  projectId: "habityyy",
-  storageBucket: "habityyy.firebasestorage.app",
-  messagingSenderId: "915040588600",
-  appId: "1:915040588600:web:324ca55e1867966a9ea7cd",
-  measurementId: "G-T4BW0RNF2Y"
-};
-
-const fbApp = initializeApp(firebaseConfig);
-const auth = getAuth(fbApp);
-const db = getFirestore(fbApp);
-const googleProvider = new GoogleAuthProvider();
-
-let currentUser = null;
-let unsubscribers = [];
-let showAddGoalForm = false;
-
-function isoDate(d){ return d.toISOString().slice(0,10); }
-function todayISO(){ return isoDate(new Date()); }
-
-function loadDarkPref(){
-  try{ return localStorage.getItem('habity_dark') === '1'; }
-  catch(e){ return false; }
-}
-function saveDarkPref(){
-  try{ localStorage.setItem('habity_dark', state.darkMode ? '1' : '0'); }
-  catch(e){ /* ignore */ }
-}
-
-let state = { habits: [], goals: [], journal: [], darkMode: loadDarkPref() };
-
-// =====================================================
-// AUTH
-// =====================================================
-function signInWithGoogle(){
-  signInWithPopup(auth, googleProvider).catch(err => {
-    console.error('Google sign-in error', err);
-    alert("Kirishda xatolik yuz berdi. Qaytadan urinib ko'ring.");
-  });
-}
-function signOutUser(){
-  signOut(auth).catch(err => console.error('Sign-out error', err));
-}
-
-function continueWithName(){
-  const input = document.getElementById('guest-name');
-  const name = (input ? input.value : '').trim();
-  if(!name){ alert("Iltimos, avval ismingizni kiriting."); return; }
-  signInAnonymously(auth)
-    .then(cred => updateProfile(cred.user, { displayName: name }))
-    .then(() => { if(auth.currentUser) applyUserUI(auth.currentUser); })
-    .catch(err => {
-      console.error('Anonymous sign-in error', err);
-      alert("Kirishda xatolik: " + err.message);
-    });
-}
-
-function unsubscribeAll(){
-  unsubscribers.forEach(u => { try{ u(); }catch(e){} });
-  unsubscribers = [];
-}
-
-function subscribeToUserData(uid){
-  unsubscribeAll();
-  const habitsCol = collection(db, 'users', uid, 'habits');
-  const journalCol = collection(db, 'users', uid, 'journal');
-  const goalsCol = collection(db, 'users', uid, 'goals');
-
-  unsubscribers.push(onSnapshot(habitsCol, snap => {
-    state.habits = snap.docs.map(d => ({ id: d.id, name: d.data().name || '', logs: d.data().logs || {} }));
-    renderAll();
-  }, err => console.error('Habits sync error', err)));
-
-  unsubscribers.push(onSnapshot(journalCol, snap => {
-    state.journal = snap.docs.map(d => ({ id: d.id, date: d.id, mood: d.data().mood, sleep: d.data().sleep, text: d.data().text || '' }));
-    renderAll();
-  }, err => console.error('Journal sync error', err)));
-
-  unsubscribers.push(onSnapshot(goalsCol, snap => {
-    state.goals = snap.docs.map(d => ({ id: d.id, name: d.data().name || '', deadline: d.data().deadline || '', percent: d.data().percent || 0 }));
-    renderAll();
-  }, err => console.error('Goals sync error', err)));
-}
-
-function applyUserUI(user){
-  const name = user.displayName || 'Foydalanuvchi';
-  const firstName = name.split(' ')[0];
-  const email = user.email || 'Mehmon hisobi';
-  const initial = name.charAt(0).toUpperCase();
-  const photo = user.photoURL;
-  const avatarHtml = photo
-    ? `<img src="${photo}" alt="${escapeHtml(name)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
-    : initial;
-
-  const sidebarAvatar = document.getElementById('sidebar-avatar');
-  const sidebarName = document.getElementById('sidebar-name');
-  const sidebarEmail = document.getElementById('sidebar-email');
-  if(sidebarAvatar) sidebarAvatar.innerHTML = avatarHtml;
-  if(sidebarName) sidebarName.textContent = name;
-  if(sidebarEmail) sidebarEmail.textContent = email;
-
-  const profileAvatar = document.getElementById('profile-avatar');
-  const profileName = document.getElementById('profile-name');
-  const profileEmail = document.getElementById('profile-email');
-  const profileJoined = document.getElementById('profile-joined');
-  if(profileAvatar) profileAvatar.innerHTML = avatarHtml;
-  if(profileName) profileName.textContent = name;
-  if(profileEmail) profileEmail.textContent = email;
-  if(profileJoined && user.metadata && user.metadata.creationTime){
-    const joinedStr = new Date(user.metadata.creationTime).toLocaleDateString('uz-UZ', { month: 'long', year: 'numeric' });
-    profileJoined.textContent = joinedStr + " dan beri a'zo";
+:root{
+    --bg: #F7F6F2;
+    --surface: #FFFFFF;
+    --ink: #22271F;
+    --ink-soft: #5C6357;
+    --ink-faint: #8A8F82;
+    --accent: #3F6B54;
+    --accent-dark: #2E4F3E;
+    --accent-soft: #DCE8DE;
+    --highlight: #B8763E;
+    --highlight-soft: #F1E1CF;
+    --border: #E4E1D8;
+    --danger: #A6483A;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 18px;
+    --shadow: 0 1px 2px rgba(34,39,31,0.04), 0 4px 16px rgba(34,39,31,0.05);
   }
 
-  const settingsName = document.getElementById('settings-name-input');
-  const settingsEmail = document.getElementById('settings-email-input');
-  if(settingsName) settingsName.value = name;
-  if(settingsEmail) settingsEmail.value = email;
-
-  document.querySelectorAll('.dash-greeting-name').forEach(el => { el.textContent = firstName; });
-}
-
-onAuthStateChanged(auth, user => {
-  if(user){
-    currentUser = user;
-    document.getElementById('auth-screen').style.display = 'none';
-    document.getElementById('app-shell').classList.add('active');
-    applyUserUI(user);
-    subscribeToUserData(user.uid);
-  }else{
-    currentUser = null;
-    unsubscribeAll();
-    state.habits = []; state.goals = []; state.journal = [];
-    document.getElementById('app-shell').classList.remove('active');
-    document.getElementById('auth-screen').style.display = 'flex';
+  body.dark{
+    --bg: #1B1E19;
+    --surface: #232720;
+    --ink: #EDEDE6;
+    --ink-soft: #A7AC9E;
+    --ink-faint: #6C7266;
+    --accent: #5C9679;
+    --accent-dark: #7CB69A;
+    --accent-soft: #2C3A31;
+    --highlight: #D8934F;
+    --highlight-soft: #3A2E1E;
+    --border: #333831;
+    --danger: #D97A6C;
   }
-});
-
-// ---------- View switching ----------
-function showView(name){
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.getElementById('view-' + name).classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n => {
-    n.classList.toggle('active', n.dataset.view === name);
-  });
-}
-
-// ---------- Dark mode ----------
-function applyDarkMode(){
-  document.body.classList.toggle('dark', !!state.darkMode);
-  const t = document.getElementById('dark-toggle');
-  if(t) t.classList.toggle('on', !!state.darkMode);
-}
-function toggleDarkMode(){
-  state.darkMode = !state.darkMode;
-  saveDarkPref();
-  applyDarkMode();
-}
-
-// ---------- Date header ----------
-function refreshDateHeaders(){
-  const dateStr = new Date().toLocaleDateString('uz-UZ', { weekday: 'long', day: 'numeric', month: 'long' });
-  const a = document.getElementById('today-date');
-  const b = document.getElementById('today-date-2');
-  if(a) a.textContent = dateStr;
-  if(b) b.textContent = dateStr;
-}
-
-// =====================================================
-// ICONS
-// =====================================================
-function checkIcon(){
-  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
-}
-function editIcon(){
-  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
-}
-function trashIcon(){
-  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
-}
-function escapeHtml(str){
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
-
-// =====================================================
-// DATE HELPERS
-// =====================================================
-function lastNDates(n){
-  const arr = [];
-  for(let i = n-1; i >= 0; i--){
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    arr.push(d);
+  body.dark .auth-brand{
+    background: linear-gradient(160deg, #1E2E25, #2C4436);
   }
-  return arr;
-}
-function daysInMonth(year, month){ return new Date(year, month + 1, 0).getDate(); }
-function currentMonthDates(){
-  const now = new Date();
-  const y = now.getFullYear(), m = now.getMonth();
-  const total = daysInMonth(y, m);
-  const arr = [];
-  for(let day = 1; day <= total; day++) arr.push(new Date(y, m, day));
-  return arr;
-}
-
-// =====================================================
-// HABITS
-// =====================================================
-const STATUS_CYCLE = [null, 'green', 'yellow', 'red'];
-
-function cycleStatus(habitId, dateKey){
-  if(!currentUser) return;
-  const habit = state.habits.find(h => h.id === habitId);
-  if(!habit) return;
-  const current = habit.logs[dateKey] || null;
-  const idx = STATUS_CYCLE.indexOf(current);
-  const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
-  const ref = doc(db, 'users', currentUser.uid, 'habits', habitId);
-  updateDoc(ref, { [`logs.${dateKey}`]: next === null ? deleteField() : next })
-    .catch(err => console.error('cycleStatus error', err));
-}
-
-function computeCurrentStreak(habit){
-  let d = new Date();
-  if(!habit.logs[isoDate(d)]) d.setDate(d.getDate() - 1);
-  let streak = 0;
-  while(habit.logs[isoDate(d)] === 'green'){
-    streak++;
-    d.setDate(d.getDate() - 1);
+  body.dark img.wordmark-logo, body.dark img.brand-logo{
+    background: #EFEDE4;
   }
-  return streak;
-}
+  body{ transition: background .2s ease, color .2s ease; }
 
-function computeLongestStreak(habit){
-  const greenDates = Object.keys(habit.logs)
-    .filter(k => habit.logs[k] === 'green')
-    .sort();
-  if(greenDates.length === 0) return 0;
-  let longest = 1, run = 1;
-  for(let i = 1; i < greenDates.length; i++){
-    const prev = new Date(greenDates[i-1]);
-    const cur = new Date(greenDates[i]);
-    const diffDays = Math.round((cur - prev) / 86400000);
-    run = diffDays === 1 ? run + 1 : 1;
-    longest = Math.max(longest, run);
+  *{ box-sizing: border-box; }
+  html, body{ height: 100%; }
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
-  return longest;
-}
+  h1,h2,h3, .serif{ font-family: 'Fraunces', Georgia, serif; }
+  .mono{ font-family: 'IBM Plex Mono', monospace; }
+  button{ font-family: inherit; cursor: pointer; }
+  input, textarea{ font-family: inherit; }
+  a{ color: inherit; }
+  ::selection{ background: var(--accent-soft); }
 
-function addHabit(name){
-  const trimmed = (name || '').trim();
-  if(!trimmed || !currentUser) return;
-  addDoc(collection(db, 'users', currentUser.uid, 'habits'), { name: trimmed, logs: {}, createdAt: serverTimestamp() })
-    .catch(err => alert("Odat qo'shishda xatolik: " + err.message));
-}
-function deleteHabit(id){
-  if(!currentUser) return;
-  if(!confirm("Bu odatni o'chirmoqchimisiz? Barcha tarix ham o'chib ketadi.")) return;
-  deleteDoc(doc(db, 'users', currentUser.uid, 'habits', id)).catch(err => alert('Xatolik: ' + err.message));
-}
-function renameHabit(id, newName){
-  const trimmed = (newName || '').trim();
-  if(!trimmed || !currentUser) return;
-  updateDoc(doc(db, 'users', currentUser.uid, 'habits', id), { name: trimmed }).catch(err => console.error(err));
-}
-function editHabitName(id){
-  const nameEl = document.querySelector(`.hname[data-id="${id}"]`);
-  if(!nameEl) return;
-  nameEl.setAttribute('contenteditable', 'true');
-  nameEl.focus();
-  document.execCommand && document.execCommand('selectAll', false, null);
-}
-
-function renderHabits(){
-  const tableEl = document.getElementById('habit-grid-table');
-  const monthLabelEl = document.getElementById('grid-month-label');
-  const emptyEl = document.getElementById('habit-grid-empty');
-  if(!tableEl) return;
-
-  const today = todayISO();
-  const monthDates = currentMonthDates();
-  if(monthLabelEl){
-    monthLabelEl.textContent = new Date().toLocaleDateString('uz-UZ', { month: 'long', year: 'numeric' });
+  /* ---------- Focus visibility ---------- */
+  button:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:focus-visible{
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 
-  if(state.habits.length === 0){
-    tableEl.innerHTML = '';
-    tableEl.style.display = 'none';
-    if(emptyEl) emptyEl.style.display = 'block';
-    return;
+  /* ================= AUTH SCREEN ================= */
+  #auth-screen{
+    min-height: 100vh;
+    display: flex;
   }
-  tableEl.style.display = '';
-  if(emptyEl) emptyEl.style.display = 'none';
-
-  const headCells = monthDates.map(d => {
-    const isToday = isoDate(d) === today;
-    return `<th class="${isToday ? 'today-col' : ''}">${d.getDate()}</th>`;
-  }).join('');
-
-  const bodyRows = state.habits.map(h => {
-    const streak = computeCurrentStreak(h);
-    const dayCells = monthDates.map(d => {
-      const k = isoDate(d);
-      const isFuture = k > today;
-      const s = h.logs[k];
-      const cls = ['grid-dot'];
-      if(s) cls.push('state-' + s);
-      if(k === today) cls.push('is-today');
-      if(isFuture) cls.push('future');
-      const clickAttr = isFuture ? '' : ` onclick="cycleStatus('${h.id}','${k}')"`;
-      return `<td class="hcell-day"><div class="${cls.join(' ')}"${clickAttr} title="${d.getDate()}-kun"></div></td>`;
-    }).join('');
-    return `
-      <tr>
-        <td class="hcell-name"><div class="hname" data-id="${h.id}" onblur="renameHabit('${h.id}', this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}">${escapeHtml(h.name)}</div></td>
-        ${dayCells}
-        <td class="hcell-meta">
-          <div class="hcell-meta-inner">
-            <div class="streak-badge">🔥 ${streak}</div>
-            <div class="habit-actions">
-              <button class="icon-btn" title="Nomini tahrirlash" onclick="editHabitName('${h.id}')">${editIcon()}</button>
-              <button class="icon-btn danger" title="O'chirish" onclick="deleteHabit('${h.id}')">${trashIcon()}</button>
-            </div>
-          </div>
-        </td>
-      </tr>`;
-  }).join('');
-
-  tableEl.innerHTML = `
-    <thead><tr><th class="hcell-name-head"></th>${headCells}<th></th></tr></thead>
-    <tbody>${bodyRows}</tbody>`;
-}
-
-// =====================================================
-// STATISTIKA
-// =====================================================
-function renderStats(){
-  const longestEl = document.getElementById('stat-longest-streak');
-  const weeklyEl = document.getElementById('stat-weekly-pct');
-  const totalEl = document.getElementById('stat-total-completions');
-  const barsEl = document.getElementById('week-bars');
-  const heatEl = document.getElementById('heat-grid');
-  if(!barsEl || !heatEl) return;
-
-  const habits = state.habits;
-  const longest = habits.length ? Math.max(0, ...habits.map(computeLongestStreak)) : 0;
-  const totalCompletions = habits.reduce((sum, h) => sum + Object.values(h.logs).filter(s => s === 'green').length, 0);
-
-  const scoreOf = s => s === 'green' ? 1 : s === 'yellow' ? 0.5 : 0;
-
-  const last7 = lastNDates(7);
-  let weeklyPct = 0;
-  if(habits.length){
-    let sum = 0, count = 0;
-    last7.forEach(d => {
-      const k = isoDate(d);
-      habits.forEach(h => { sum += scoreOf(h.logs[k]); count++; });
-    });
-    weeklyPct = count ? Math.round((sum / count) * 100) : 0;
+  .auth-brand{
+    flex: 1;
+    background: linear-gradient(160deg, var(--accent-dark), var(--accent));
+    color: #F4F2EA;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 56px;
+  }
+  img.wordmark-logo{
+    height: 46px;
+    width: auto;
+    border-radius: 12px;
+    padding: 6px 10px;
+    background: #F4F2EA;
+    display: block;
+  }
+  .auth-brand .tagline{
+    max-width: 360px;
+    font-size: 34px;
+    line-height: 1.25;
+    font-weight: 500;
+  }
+  .auth-brand .foot-note{
+    font-size: 13px;
+    color: #D7E2D9;
+    opacity: 0.8;
+  }
+  .auth-form-wrap{
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+  }
+  .auth-card{
+    width: 100%;
+    max-width: 380px;
+  }
+  .auth-card h2{
+    font-size: 26px;
+    margin: 0 0 6px;
+  }
+  .auth-card .sub{
+    color: var(--ink-soft);
+    font-size: 14px;
+    margin: 0 0 32px;
+  }
+  .field{
+    margin-bottom: 18px;
+  }
+  .field label{
+    display:block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--ink-soft);
+  }
+  .field input, .field textarea{
+    width: 100%;
+    padding: 11px 13px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .field input::placeholder{ color: var(--ink-faint); }
+  .field input[readonly]{ background: var(--bg); color: var(--ink-soft); cursor:default; }
+  .btn{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 11px 20px;
+    border-radius: var(--radius-sm);
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    transition: transform .12s ease, background .15s ease;
+  }
+  .btn-primary{
+    background: var(--accent);
+    color: #fff;
+    width: 100%;
+  }
+  .btn-primary:hover{ background: var(--accent-dark); }
+  .btn-primary:active{ transform: scale(0.98); }
+  .btn-ghost{
+    background: transparent;
+    color: var(--ink-soft);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover{ border-color: var(--accent); color: var(--accent); }
+  .auth-divider{
+    display:flex; align-items:center; gap:10px; margin: 16px 0;
+    color: var(--ink-faint); font-size:12.5px;
+  }
+  .auth-divider::before, .auth-divider::after{
+    content:''; flex:1; height:1px; background: var(--border);
+  }
+  .btn-google{ width:100%; }
+  .auth-switch{
+    margin-top: 22px;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    text-align: center;
+  }
+  .auth-switch button{
+    background: none; border: none; color: var(--accent); font-weight: 600; padding: 0;
   }
 
-  if(longestEl) longestEl.textContent = longest;
-  if(weeklyEl) weeklyEl.textContent = weeklyPct + '%';
-  if(totalEl) totalEl.textContent = totalCompletions;
+  /* ================= APP SHELL ================= */
+  #app-shell{ display: none; min-height: 100vh; }
+  #app-shell.active{ display: flex; }
 
-  const dayLabels = last7.map(d => d.toLocaleDateString('uz-UZ', { weekday: 'short' }));
-  barsEl.innerHTML = last7.map((d, i) => {
-    const k = isoDate(d);
-    let pct = 0;
-    if(habits.length){
-      const sum = habits.reduce((s, h) => s + scoreOf(h.logs[k]), 0);
-      pct = Math.round((sum / habits.length) * 100);
+  .sidebar{
+    width: 232px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 24px 16px;
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+  }
+  .sidebar .brand{
+    padding: 4px 6px 24px;
+    display:flex; align-items:center;
+  }
+  img.brand-logo{
+    height: 34px;
+    width: auto;
+  }
+  .nav-item{
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink-soft);
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+    margin-bottom: 2px;
+  }
+  .nav-item svg{ width: 18px; height: 18px; flex-shrink: 0; }
+  .nav-item:hover{ background: var(--bg); color: var(--ink); }
+  .nav-item.active{ background: var(--accent-soft); color: var(--accent-dark); }
+  .sidebar-foot{
+    margin-top: auto;
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+  }
+  .mini-profile{
+    display:flex; align-items:center; gap:10px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+  }
+  .mini-profile:hover{ background: var(--bg); }
+  .avatar{
+    width: 32px; height:32px; border-radius:50%;
+    background: var(--accent);
+    color:#fff; display:flex; align-items:center; justify-content:center;
+    font-size: 13px; font-weight:600; flex-shrink:0;
+  }
+  .mini-profile .name{ font-size: 13.5px; font-weight:600; }
+  .mini-profile .email{ font-size: 11.5px; color: var(--ink-faint); }
+
+  .main{
+    flex: 1;
+    padding: 36px 44px 60px;
+    max-width: 980px;
+  }
+  .view{ display:none; }
+  .view.active{ display:block; animation: fadein .25s ease; }
+  @keyframes fadein{ from{opacity:0; transform: translateY(4px);} to{opacity:1; transform:none;} }
+
+  .page-head{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    margin-bottom: 28px;
+  }
+  .page-head .eyebrow{
+    font-size: 12.5px; font-weight:600; letter-spacing:.04em; text-transform:uppercase;
+    color: var(--highlight); margin-bottom:6px;
+  }
+  .page-head h1{ font-size: 30px; margin:0; font-weight:500; }
+  .page-head .today{ color: var(--ink-soft); font-size: 14px; }
+
+  .card{
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+  }
+
+  /* ---------- Dashboard ---------- */
+  .habit-grid-card{ padding: 20px 20px 16px; }
+  .grid-legend{
+    display:flex; align-items:center; gap:18px; flex-wrap:wrap;
+    font-size:12.5px; color: var(--ink-soft); padding: 2px 4px 16px;
+  }
+  .grid-legend > span{ display:flex; align-items:center; gap:6px; }
+  .legend-dot{ width:11px; height:11px; border-radius:50%; display:inline-block; }
+  .legend-dot.green{ background: var(--accent); }
+  .legend-dot.yellow{ background: #E4B23C; }
+  .legend-dot.red{ background: var(--danger); }
+  .grid-month{ margin-left:auto; color: var(--ink-faint); font-size:12px; }
+
+  .grid-scroll{ overflow-x: auto; padding-bottom: 4px; }
+  table.habit-grid{ border-collapse: collapse; width:100%; }
+  table.habit-grid th, table.habit-grid td{ padding: 0; }
+  table.habit-grid thead th{
+    font-size: 10.5px; font-weight:600; color: var(--ink-faint); text-align:center;
+    padding-bottom: 8px; min-width: 26px;
+  }
+  table.habit-grid thead th.today-col{ color: var(--accent-dark); }
+  table.habit-grid th.hcell-name-head, table.habit-grid td.hcell-name{
+    text-align:left; position: sticky; left:0; background: var(--surface);
+    padding-right: 14px; min-width: 150px; max-width: 190px;
+  }
+  table.habit-grid td.hcell-name{ font-size:13.5px; font-weight:600; padding-top:10px; padding-bottom:10px; }
+  table.habit-grid td.hcell-name .hname[contenteditable="true"]{
+    outline:none; border-bottom: 1px dashed var(--accent);
+  }
+  table.habit-grid tbody tr{ border-top: 1px solid var(--border); }
+  table.habit-grid td.hcell-day{ text-align:center; vertical-align:middle; }
+  .grid-dot{
+    width: 20px; height:20px; border-radius:50%;
+    background: var(--bg); border: 1.5px solid var(--border);
+    margin: 4px auto; cursor:pointer; transition: transform .1s ease;
+  }
+  .grid-dot:hover{ transform: scale(1.12); }
+  .grid-dot.future{ cursor: default; opacity:.35; }
+  .grid-dot.future:hover{ transform:none; }
+  .grid-dot.state-green{ background: var(--accent); border-color: var(--accent); }
+  .grid-dot.state-yellow{ background: #E4B23C; border-color: #E4B23C; }
+  .grid-dot.state-red{ background: var(--danger); border-color: var(--danger); }
+  .grid-dot.is-today{ box-shadow: 0 0 0 2px var(--highlight-soft); }
+  td.hcell-meta{ padding-left: 14px; white-space: nowrap; }
+  .hcell-meta-inner{ display:flex; align-items:center; gap:6px; }
+
+  .streak-badge{
+    display:flex; align-items:center; gap:4px;
+    font-size: 12.5px; font-weight:600; color: var(--highlight);
+    background: var(--highlight-soft);
+    padding: 4px 9px; border-radius: 20px;
+    flex-shrink:0;
+    white-space: nowrap;
+  }
+  .habit-actions{
+    display:flex; gap:2px; opacity:0; transition: opacity .15s ease; flex-shrink:0;
+  }
+  table.habit-grid tbody tr:hover .habit-actions{ opacity:1; }
+  .icon-btn{
+    width:24px; height:24px; border-radius:7px; border:none; background:transparent;
+    display:flex; align-items:center; justify-content:center; color: var(--ink-faint);
+  }
+  .icon-btn:hover{ background: var(--bg); color: var(--ink); }
+  .icon-btn.danger:hover{ color: var(--danger); }
+  .icon-btn svg{ width:14px; height:14px; }
+  .add-habit-row{
+    display:flex; gap:8px; padding: 14px 4px 4px;
+  }
+  .add-habit-row input{
+    flex:1; border:1px dashed var(--border); border-radius: var(--radius-sm);
+    padding: 9px 12px; font-size:13.5px; background:transparent; color: var(--ink);
+  }
+  .empty-state{
+    padding: 30px 20px; text-align:center; color: var(--ink-faint); font-size:13.5px;
+  }
+
+  .side-row{ display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-top:20px; }
+  .quicklog{ padding: 18px 18px 20px; }
+  .quicklog h3{ font-size:15px; margin:0 0 14px; font-weight:600; }
+  .slider-block{ margin-bottom: 16px; }
+  .slider-block:last-of-type{ margin-bottom: 0; }
+  .slider-label{
+    display:flex; justify-content:space-between; align-items:baseline;
+    font-size: 13px; color: var(--ink-soft); margin-bottom:8px;
+  }
+  .slider-label .val{ font-family:'IBM Plex Mono'; font-weight:600; color: var(--ink); font-size: 13px; }
+  input[type=range]{
+    -webkit-appearance:none; width:100%; height:5px; border-radius:4px;
+    background: var(--border); outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:17px; height:17px; border-radius:50%;
+    background: var(--accent); cursor:pointer; border: 2.5px solid #fff; box-shadow: 0 0 0 1px var(--accent);
+  }
+  .journal-mini textarea{
+    width:100%; border:1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 10px 12px; font-size: 13.5px; resize:none; height: 64px; margin-top: 4px;
+  }
+
+  .mood-card{ padding: 18px; }
+  .mood-card .rownum{ display:flex; justify-content:space-between; align-items:center; }
+  .mood-card .big{ font-size: 34px; font-weight:600; font-family:'IBM Plex Mono'; }
+  .mood-card .label{ font-size:12.5px; color: var(--ink-soft); }
+
+  /* ---------- Statistika ---------- */
+  .stat-cards{ display:grid; grid-template-columns: repeat(3,1fr); gap:16px; margin-bottom:24px; }
+  .stat-mini{ padding: 18px 20px; }
+  .stat-mini .num{ font-size: 30px; font-weight:600; font-family:'IBM Plex Mono'; color: var(--accent-dark); }
+  .stat-mini .lbl{ font-size:12.5px; color: var(--ink-soft); margin-top:4px; }
+
+  .bar-chart{ padding: 22px 22px 10px; margin-bottom: 20px; }
+  .bar-chart h3{ font-size:15px; margin:0 0 20px; font-weight:600; }
+  .bars{ display:flex; align-items:flex-end; gap: 14px; height: 140px; }
+  .bar-col{ flex:1; display:flex; flex-direction:column; align-items:center; gap:8px; height:100%; justify-content:flex-end; }
+  .bar-fill{ width: 100%; max-width: 30px; border-radius: 5px 5px 2px 2px; background: var(--accent-soft); position:relative; }
+  .bar-fill.filled{ background: var(--accent); }
+  .bar-col .daylabel{ font-size:11.5px; color: var(--ink-faint); }
+
+  .heatmap{ padding: 22px; }
+  .heatmap h3{ font-size:15px; margin:0 0 16px; font-weight:600; }
+  .heat-grid{
+    display:grid; grid-template-columns: repeat(30, 1fr); gap:4px;
+  }
+  .heat-cell{ aspect-ratio:1; border-radius:3px; background: var(--border); }
+  .heat-cell.l1{ background: var(--accent-soft); }
+  .heat-cell.l2{ background: #9DBBA9; }
+  .heat-cell.l3{ background: var(--accent); }
+
+  /* ---------- Kundalik ---------- */
+  .journal-editor{ padding:22px; margin-bottom:22px; }
+  .journal-editor .sliders-row{ display:flex; gap: 30px; margin-bottom:20px; }
+  .journal-editor .sliders-row .slider-block{ flex:1; margin-bottom:0; }
+  .journal-editor textarea{
+    width:100%; min-height:120px; border:1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 14px; font-size:14px; line-height:1.6; resize:vertical;
+  }
+  .journal-editor .save-row{ display:flex; justify-content:flex-end; margin-top:14px; }
+  .entry-list{ display:flex; flex-direction:column; gap:12px; }
+  .entry-card{ padding:16px 18px; }
+  .entry-card .ehead{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .entry-card .edate{ font-size: 13px; font-weight:600; }
+  .entry-card .estats{ display:flex; gap:14px; font-size:12px; color: var(--ink-soft); }
+  .entry-card .etext{ font-size:13.5px; color: var(--ink-soft); line-height:1.55; }
+
+  /* ---------- Maqsadlar ---------- */
+  .goals-grid{ display:grid; grid-template-columns: repeat(2,1fr); gap:16px; }
+  .goal-card{ padding:18px; }
+  .goal-card .ghead{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
+  .goal-card .gname{ font-size:15px; font-weight:600; }
+  .goal-card .gdeadline{ font-size:12px; color: var(--ink-faint); margin-top:3px; }
+  .progress-track{ height:8px; border-radius:5px; background: var(--bg); overflow:hidden; margin-bottom:8px; }
+  .progress-fill{ height:100%; background: var(--accent); border-radius:5px; }
+  .goal-card .gpercent{ font-size:12.5px; font-weight:600; color: var(--accent-dark); font-family:'IBM Plex Mono'; }
+  .goal-card .gname[contenteditable="true"], .goal-card .gdeadline[contenteditable="true"]{
+    outline:none; border-bottom: 1px dashed var(--accent);
+  }
+  .goal-actions{ display:flex; gap:2px; opacity:0; transition:opacity .15s ease; }
+  .goal-card:hover .goal-actions{ opacity:1; }
+  .goal-card .percent-slider{ margin-top:10px; }
+  .goal-card .percent-slider input[type=range]{ height:4px; }
+  .add-goal-card{
+    border: 1.5px dashed var(--border); border-radius: var(--radius-lg);
+    display:flex; align-items:center; justify-content:center;
+    color: var(--ink-faint); font-size:14px; font-weight:600; min-height: 110px;
+    background:transparent;
+  }
+  .add-goal-card:hover{ border-color: var(--accent); color: var(--accent); }
+  .add-goal-form{ padding:18px; }
+  .add-goal-form .field{ margin-bottom:12px; }
+  .add-goal-form .form-actions{ display:flex; gap:8px; margin-top:4px; }
+  .entry-card .goal-actions, .entry-actions{ display:flex; gap:2px; opacity:0; transition:opacity .15s ease; }
+  .entry-card:hover .entry-actions{ opacity:1; }
+
+  /* ---------- Profil ---------- */
+  .profile-head{ display:flex; align-items:center; gap:18px; padding: 26px; margin-bottom:20px; }
+  .profile-head .avatar{ width:64px; height:64px; font-size:22px; }
+  .profile-head .pname{ font-size:20px; font-weight:600; }
+  .profile-head .pemail{ font-size:13.5px; color: var(--ink-soft); }
+  .profile-head .pjoined{ font-size:12px; color: var(--ink-faint); margin-top:4px; }
+  .profile-stats{ display:grid; grid-template-columns: repeat(4,1fr); gap:14px; }
+  .pstat{ padding:16px; text-align:center; }
+  .pstat .num{ font-size:22px; font-weight:600; font-family:'IBM Plex Mono'; color: var(--accent-dark); }
+  .pstat .lbl{ font-size:11.5px; color: var(--ink-soft); margin-top:4px; }
+
+  /* ---------- Sozlamalar ---------- */
+  .settings-section{ padding: 22px; margin-bottom: 18px; }
+  .settings-section h3{ font-size:15px; margin:0 0 16px; font-weight:600; }
+  .setting-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding: 12px 0; border-bottom:1px solid var(--border);
+  }
+  .setting-row:last-child{ border-bottom:none; }
+  .setting-row .stitle{ font-size:13.5px; font-weight:500; }
+  .setting-row .sdesc{ font-size:12px; color: var(--ink-faint); margin-top:2px; }
+  .toggle{
+    width:40px; height:23px; border-radius:20px; background: var(--border);
+    position:relative; border:none; flex-shrink:0;
+  }
+  .toggle::after{
+    content:''; position:absolute; top:2.5px; left:3px; width:18px; height:18px; border-radius:50%;
+    background:#fff; transition: left .15s ease;
+  }
+  .toggle.on{ background: var(--accent); }
+  .toggle.on::after{ left: 19px; }
+  .danger-zone{ border-color: #E7D2CC; }
+  .danger-zone h3{ color: var(--danger); }
+
+  /* ---------- Mobile bottom nav ---------- */
+  .mobile-nav{ display:none; }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 860px){
+    .sidebar{ display:none; }
+    .main{ padding: 18px 14px 84px; max-width:100%; }
+    .side-row, .goals-grid, .profile-stats, .stat-cards{ grid-template-columns: 1fr; }
+    .journal-editor .sliders-row{ flex-direction:column; gap:16px; }
+    .auth-brand{ display:none; }
+    .auth-form-wrap{ padding: 24px; }
+    .heat-grid{ grid-template-columns: repeat(15,1fr); }
+    .page-head{ flex-direction:column; align-items:flex-start; gap:6px; }
+    .page-head h1{ font-size:24px; }
+
+    .mobile-nav{
+      display:flex;
+      position: fixed; left:0; right:0; bottom:0; z-index: 50;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 6px 2px calc(6px + env(safe-area-inset-bottom, 0px));
+      box-shadow: 0 -4px 16px rgba(34,39,31,0.06);
     }
-    return `<div class="bar-col"><div class="bar-fill ${pct>=70?'filled':''}" style="height:${Math.max(pct,3)}%;"></div><div class="daylabel">${dayLabels[i]}</div></div>`;
-  }).join('');
-
-  const last30 = lastNDates(30);
-  heatEl.innerHTML = last30.map(d => {
-    const k = isoDate(d);
-    const involved = habits.filter(h => h.logs[k]);
-    if(involved.length === 0) return `<div class="heat-cell"></div>`;
-    const avg = involved.reduce((s, h) => s + scoreOf(h.logs[k]), 0) / involved.length;
-    const level = avg >= 0.75 ? 'l3' : avg >= 0.4 ? 'l2' : 'l1';
-    return `<div class="heat-cell ${level}"></div>`;
-  }).join('');
-}
-
-// =====================================================
-// KUNDALIK (Journal)
-// =====================================================
-function saveJournalEntry(mood, sleep, text){
-  const trimmed = (text || '').trim();
-  if(!trimmed){ alert("Iltimos, avval bugungi kayfiyatingiz haqida bir necha jumla yozing."); return; }
-  if(!currentUser) return;
-  const today = todayISO();
-  setDoc(doc(db, 'users', currentUser.uid, 'journal', today), {
-    mood, sleep, text: trimmed, updatedAt: serverTimestamp()
-  }, { merge: true }).catch(err => alert('Saqlashda xatolik: ' + err.message));
-}
-function deleteJournalEntry(id){
-  if(!currentUser) return;
-  if(!confirm("Bu yozuvni o'chirmoqchimisiz?")) return;
-  deleteDoc(doc(db, 'users', currentUser.uid, 'journal', id)).catch(err => console.error(err));
-}
-
-function formatEntryDate(iso){
-  const d = new Date(iso + 'T00:00:00');
-  return d.toLocaleDateString('uz-UZ', { day: 'numeric', month: 'long', weekday: 'long' });
-}
-
-function renderJournal(){
-  const listEl = document.getElementById('entry-list');
-  if(!listEl) return;
-  const sorted = [...state.journal].sort((a,b) => b.date.localeCompare(a.date));
-  if(sorted.length === 0){
-    listEl.innerHTML = `<div class="card empty-state">Hali kundalik yozuv yo'q.<br>Yuqoridagi maydonga bugungi kuningizni yozib, saqlab qo'ying.</div>`;
-  }else{
-    listEl.innerHTML = sorted.map(e => `
-      <div class="card entry-card">
-        <div class="ehead">
-          <div class="edate">${formatEntryDate(e.date)}</div>
-          <div style="display:flex; align-items:center; gap:10px;">
-            <div class="estats"><span>Kayfiyat: ${e.mood}/10</span><span>Uyqu: ${e.sleep}/10</span></div>
-            <div class="entry-actions"><button class="icon-btn danger" title="O'chirish" onclick="deleteJournalEntry('${e.id}')">${trashIcon()}</button></div>
-          </div>
-        </div>
-        <div class="etext">${escapeHtml(e.text)}</div>
-      </div>
-    `).join('');
-  }
-
-  const moodAvgEl = document.getElementById('mood-avg');
-  if(moodAvgEl){
-    const last7keys = lastNDates(7).map(isoDate);
-    const recent = state.journal.filter(e => last7keys.includes(e.date));
-    if(recent.length === 0){
-      moodAvgEl.textContent = '—';
-    }else{
-      const avg = recent.reduce((s,e) => s + Number(e.mood), 0) / recent.length;
-      moodAvgEl.textContent = avg.toFixed(1);
+    .mobile-nav .mnav-item{
+      flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
+      font-size: 10px; font-weight:600; color: var(--ink-faint);
+      background:none; border:none; padding:5px 2px; border-radius: 8px;
     }
+    .mobile-nav .mnav-item svg{ width:20px; height:20px; }
+    .mobile-nav .mnav-item.active{ color: var(--accent-dark); background: var(--accent-soft); }
   }
-}
 
-function wireJournalForms(){
-  const saveBtn = document.getElementById('journal-save-btn');
-  if(saveBtn){
-    saveBtn.onclick = () => {
-      const mood = document.getElementById('j-mood-val').textContent;
-      const sleep = document.getElementById('j-sleep-val').textContent;
-      const text = document.getElementById('journal-textarea').value;
-      saveJournalEntry(Number(mood), Number(sleep), text);
-      document.getElementById('journal-textarea').value = '';
-    };
+  @media (max-width: 520px){
+    table.habit-grid td.hcell-name{ min-width: 120px; max-width:130px; font-size:12.5px; }
+    .grid-dot{ width:18px; height:18px; }
   }
-  const dashSaveBtn = document.getElementById('dash-save-btn');
-  if(dashSaveBtn){
-    dashSaveBtn.onclick = () => {
-      const mood = document.getElementById('mood-val').textContent;
-      const sleep = document.getElementById('sleep-val').textContent;
-      const text = document.getElementById('dash-journal-textarea').value;
-      saveJournalEntry(Number(mood), Number(sleep), text);
-      document.getElementById('dash-journal-textarea').value = '';
-      showView('kundalik');
-    };
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation: none !important; transition: none !important; }
   }
-}
-
-// =====================================================
-// MAQSADLAR (Goals)
-// =====================================================
-function addGoal(name, deadline){
-  const trimmed = (name || '').trim();
-  if(!trimmed || !currentUser) return;
-  addDoc(collection(db, 'users', currentUser.uid, 'goals'), {
-    name: trimmed, deadline: (deadline || '').trim() || 'Muddat belgilanmagan', percent: 0, createdAt: serverTimestamp()
-  }).catch(err => alert("Maqsad qo'shishda xatolik: " + err.message));
-  showAddGoalForm = false;
-  renderGoals();
-}
-function deleteGoal(id){
-  if(!currentUser) return;
-  if(!confirm("Bu maqsadni o'chirmoqchimisiz?")) return;
-  deleteDoc(doc(db, 'users', currentUser.uid, 'goals', id)).catch(err => console.error(err));
-}
-function updateGoalPercent(id, value){
-  if(!currentUser) return;
-  const v = Number(value);
-  const card = document.querySelector(`.goal-card[data-id="${id}"]`);
-  if(card){
-    card.querySelector('.gpercent').textContent = v + '%';
-    card.querySelector('.progress-fill').style.width = v + '%';
-  }
-  updateDoc(doc(db, 'users', currentUser.uid, 'goals', id), { percent: v }).catch(err => console.error(err));
-}
-function renameGoalField(id, field, value){
-  if(!currentUser) return;
-  const trimmed = (value || '').trim();
-  if(!trimmed) return;
-  updateDoc(doc(db, 'users', currentUser.uid, 'goals', id), { [field]: trimmed }).catch(err => console.error(err));
-}
-function toggleAddGoalForm(show){
-  showAddGoalForm = show;
-  renderGoals();
-}
-function makeGoalEditable(id){
-  const card = document.querySelector(`.goal-card[data-id="${id}"]`);
-  if(!card) return;
-  const nameEl = card.querySelector('.gname');
-  nameEl.setAttribute('contenteditable', 'true');
-  nameEl.focus();
-}
-
-function renderGoals(){
-  const el = document.getElementById('goals-grid');
-  if(!el) return;
-
-  const cardsHtml = state.goals.map(g => `
-    <div class="card goal-card" data-id="${g.id}">
-      <div class="ghead">
-        <div>
-          <div class="gname" contenteditable="false" onblur="renameGoalField('${g.id}','name',this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}">${escapeHtml(g.name)}</div>
-          <div class="gdeadline" contenteditable="false" onblur="renameGoalField('${g.id}','deadline',this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}">${escapeHtml(g.deadline)}</div>
-        </div>
-        <div style="display:flex; align-items:center; gap:6px;">
-          <div class="gpercent">${g.percent}%</div>
-          <div class="goal-actions">
-            <button class="icon-btn" title="Nomini tahrirlash" onclick="makeGoalEditable('${g.id}')">${editIcon()}</button>
-            <button class="icon-btn danger" title="O'chirish" onclick="deleteGoal('${g.id}')">${trashIcon()}</button>
-          </div>
-        </div>
-      </div>
-      <div class="progress-track"><div class="progress-fill" style="width:${g.percent}%;"></div></div>
-      <div class="percent-slider">
-        <input type="range" min="0" max="100" step="5" value="${g.percent}" oninput="updateGoalPercent('${g.id}', this.value)">
-      </div>
-    </div>
-  `).join('');
-
-  const addCardHtml = showAddGoalForm ? `
-    <div class="card add-goal-form">
-      <div class="field"><label>Maqsad nomi</label><input type="text" id="new-goal-name" placeholder="Masalan: 30 kun uzluksiz mutolaa"></div>
-      <div class="field" style="margin-bottom:0;"><label>Muddati</label><input type="text" id="new-goal-deadline" placeholder="Masalan: 15-avgustgacha"></div>
-      <div class="form-actions">
-        <button class="btn btn-primary" onclick="addGoal(document.getElementById('new-goal-name').value, document.getElementById('new-goal-deadline').value)">Qo'shish</button>
-        <button class="btn btn-ghost" onclick="toggleAddGoalForm(false)">Bekor qilish</button>
-      </div>
-    </div>
-  ` : `<button class="add-goal-card" onclick="toggleAddGoalForm(true)">+ Yangi maqsad qo'shish</button>`;
-
-  el.innerHTML = cardsHtml + addCardHtml;
-}
-
-// =====================================================
-// PROFIL
-// =====================================================
-function renderProfile(){
-  const activeHabitsEl = document.getElementById('profile-active-habits');
-  const longestEl = document.getElementById('profile-longest-streak');
-  const journalCountEl = document.getElementById('profile-journal-count');
-  const activeGoalsEl = document.getElementById('profile-active-goals');
-  if(!activeHabitsEl) return;
-
-  const longest = state.habits.length ? Math.max(0, ...state.habits.map(computeLongestStreak)) : 0;
-  activeHabitsEl.textContent = state.habits.length;
-  longestEl.textContent = longest;
-  journalCountEl.textContent = state.journal.length;
-  activeGoalsEl.textContent = state.goals.filter(g => g.percent < 100).length;
-}
-
-// =====================================================
-// INIT
-// =====================================================
-function renderAll(){
-  refreshDateHeaders();
-  renderHabits();
-  renderGoals();
-  renderJournal();
-  renderStats();
-  renderProfile();
-  wireJournalForms();
-}
-
-applyDarkMode();
-refreshDateHeaders();
-
-// Expose functions referenced by inline HTML onclick/onblur/onkeydown handlers
-// (required because ES module scope doesn't leak to window automatically)
-Object.assign(window, {
-  showView, continueWithName, signInWithGoogle, signOutUser, toggleDarkMode,
-  cycleStatus, addHabit, deleteHabit, renameHabit, editHabitName,
-  addGoal, deleteGoal, updateGoalPercent, renameGoalField, toggleAddGoalForm, makeGoalEditable,
-  deleteJournalEntry
-});
