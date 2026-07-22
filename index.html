@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HabitY — kunlik odatlaringiz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ============ AUTH SCREEN ============ -->
+<div id="auth-screen">
+  <div class="auth-brand">
+    <img class="wordmark-logo" src="img/logo.png" alt="HabitY">
+    <div class="tagline">Kichik odatlar, katta o'zgarish. Har kuni bir qadam.</div>
+    <div class="foot-note">Hozircha ma'lumotlar shu brauzerda saqlanadi — hisob tizimi tez orada ulanadi.</div>
+  </div>
+  <div class="auth-form-wrap">
+    <div class="auth-card">
+      <!-- Login form -->
+      <div id="login-form">
+        <h2>Xush kelibsiz</h2>
+        <p class="sub">Davom etish uchun hisobingizga kiring</p>
+        <div class="field">
+          <label for="li-email">Email</label>
+          <input id="li-email" type="email" placeholder="ism@example.com">
+        </div>
+        <div class="field">
+          <label for="li-pass">Parol</label>
+          <input id="li-pass" type="password" placeholder="••••••••">
+        </div>
+        <button class="btn btn-primary" onclick="enterApp()">Kirish</button>
+        <div class="auth-divider"><span>yoki</span></div>
+        <button class="btn btn-ghost btn-google" onclick="enterApp()">
+          <svg viewBox="0 0 24 24" width="16" height="16"><path fill="#4285F4" d="M23.5 12.27c0-.85-.08-1.66-.22-2.45H12v4.64h6.47c-.28 1.5-1.13 2.78-2.4 3.63v3h3.87c2.27-2.09 3.56-5.17 3.56-8.82z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.07 7.94-2.9l-3.87-3c-1.08.72-2.45 1.14-4.07 1.14-3.13 0-5.78-2.11-6.73-4.96H1.27v3.1C3.25 21.3 7.31 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.28c-.25-.72-.38-1.49-.38-2.28s.14-1.56.38-2.28V6.62H1.27C.46 8.24 0 10.07 0 12s.46 3.76 1.27 5.38l4-3.1z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.94 1.19 15.24 0 12 0 7.31 0 3.25 2.7 1.27 6.62l4 3.1C6.22 6.86 8.87 4.75 12 4.75z"/></svg>
+          Google orqali kirish
+        </button>
+        <p class="auth-switch">Hisobingiz yo'qmi? <button onclick="toggleAuth()">Ro'yxatdan o'tish</button></p>
+      </div>
+      <!-- Register form -->
+      <div id="register-form" style="display:none;">
+        <h2>Hisob yarating</h2>
+        <p class="sub">Odatlaringizni kuzatishni bugun boshlang</p>
+        <div class="field">
+          <label for="re-name">Ismingiz</label>
+          <input id="re-name" type="text" placeholder="Yusuf">
+        </div>
+        <div class="field">
+          <label for="re-email">Email</label>
+          <input id="re-email" type="email" placeholder="ism@example.com">
+        </div>
+        <div class="field">
+          <label for="re-pass">Parol</label>
+          <input id="re-pass" type="password" placeholder="••••••••">
+        </div>
+        <button class="btn btn-primary" onclick="enterApp()">Ro'yxatdan o'tish</button>
+        <p class="auth-switch">Hisobingiz bormi? <button onclick="toggleAuth()">Kirish</button></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ APP SHELL ============ -->
+<div id="app-shell">
+  <aside class="sidebar">
+    <div class="brand"><img class="brand-logo" src="img/logo.png" alt="HabitY"></div>
+    <nav>
+      <button class="nav-item active" data-view="dashboard" onclick="showView('dashboard', this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        Bosh sahifa
+      </button>
+      <button class="nav-item" data-view="statistika" onclick="showView('statistika', this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V10M12 19V5M20 19v-7"/></svg>
+        Statistika
+      </button>
+      <button class="nav-item" data-view="kundalik" onclick="showView('kundalik', this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h11a2 2 0 0 1 2 2v14l-4-2-4 2-4-2-4 2V6a2 2 0 0 1 2-2Z"/></svg>
+        Kundalik
+      </button>
+      <button class="nav-item" data-view="maqsadlar" onclick="showView('maqsadlar', this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="0.8" fill="currentColor"/></svg>
+        Maqsadlar
+      </button>
+      <button class="nav-item" data-view="profil" onclick="showView('profil', this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20c1.5-4 4-6 7.5-6s6 2 7.5 6"/></svg>
+        Profil
+      </button>
+      <button class="nav-item" data-view="sozlamalar" onclick="showView('sozlamalar', this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.55V19.5a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.98 17.86a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1.03H2.5a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.14 6.98a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H8.6a1.7 1.7 0 0 0 1.03-1.55V.5a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.03 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V6.6a1.7 1.7 0 0 0 1.55 1.03h.09a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1.03Z"/></svg>
+        Sozlamalar
+      </button>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="mini-profile">
+        <div class="avatar">Y</div>
+        <div>
+          <div class="name">Yusuf</div>
+          <div class="email">yusuf@habity.uz</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- ============ DASHBOARD ============ -->
+    <section class="view active" id="view-dashboard">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Bugun</div>
+          <h1>Xayrli kun, Yusuf</h1>
+        </div>
+        <div class="today mono" id="today-date"></div>
+      </div>
+
+      <div class="dash-grid">
+        <div class="card habit-list" id="habit-list">
+          <!-- habit rows injected by JS -->
+        </div>
+
+        <div class="side-col">
+          <div class="card mood-card">
+            <div class="rownum">
+              <div>
+                <div class="big" id="mood-avg">7.2</div>
+                <div class="label">Haftalik o'rtacha kayfiyat</div>
+              </div>
+              <svg width="46" height="30" viewBox="0 0 46 30" fill="none"><path d="M1 22 L10 15 L18 20 L27 8 L36 12 L45 4" stroke="#3F6B54" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+
+          <div class="card quicklog">
+            <h3>Bugungi holat</h3>
+            <div class="slider-block">
+              <div class="slider-label"><span>Kayfiyat</span><span class="val" id="mood-val">7</span></div>
+              <input type="range" min="1" max="10" value="7" oninput="document.getElementById('mood-val').textContent=this.value">
+            </div>
+            <div class="slider-block">
+              <div class="slider-label"><span>Uyqu sifati</span><span class="val" id="sleep-val">6</span></div>
+              <input type="range" min="1" max="10" value="6" oninput="document.getElementById('sleep-val').textContent=this.value">
+            </div>
+            <div class="slider-block journal-mini">
+              <label class="slider-label"><span>Bugun nima bo'ldi?</span></label>
+              <textarea id="dash-journal-textarea" placeholder="Bir necha jumla yozing..."></textarea>
+            </div>
+            <button class="btn btn-primary" style="width:100%; margin-top:6px;" id="dash-save-btn">Kundalikka saqlash</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ STATISTIKA ============ -->
+    <section class="view" id="view-statistika">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Umumiy ko'rinish</div>
+          <h1>Statistika</h1>
+        </div>
+      </div>
+
+      <div class="stat-cards">
+        <div class="card stat-mini"><div class="num" id="stat-longest-streak">0</div><div class="lbl">Eng uzun streak (kun)</div></div>
+        <div class="card stat-mini"><div class="num" id="stat-weekly-pct">0%</div><div class="lbl">Shu haftalik bajarish</div></div>
+        <div class="card stat-mini"><div class="num" id="stat-total-completions">0</div><div class="lbl">Jami bajarilgan odatlar</div></div>
+      </div>
+
+      <div class="card bar-chart">
+        <h3>Haftalik bajarish</h3>
+        <div class="bars" id="week-bars"></div>
+      </div>
+
+      <div class="card heatmap">
+        <h3>So'nggi 30 kun</h3>
+        <div class="heat-grid" id="heat-grid"></div>
+      </div>
+    </section>
+
+    <!-- ============ KUNDALIK ============ -->
+    <section class="view" id="view-kundalik">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Jurnal</div>
+          <h1>Kundalik</h1>
+        </div>
+        <div class="today mono" id="today-date-2"></div>
+      </div>
+
+      <div class="card journal-editor">
+        <div class="sliders-row">
+          <div class="slider-block">
+            <div class="slider-label"><span>Kayfiyat</span><span class="val" id="j-mood-val">7</span></div>
+            <input type="range" min="1" max="10" value="7" oninput="document.getElementById('j-mood-val').textContent=this.value">
+          </div>
+          <div class="slider-block">
+            <div class="slider-label"><span>Uyqu sifati</span><span class="val" id="j-sleep-val">6</span></div>
+            <input type="range" min="1" max="10" value="6" oninput="document.getElementById('j-sleep-val').textContent=this.value">
+          </div>
+        </div>
+        <textarea id="journal-textarea" placeholder="Bugun qanday o'tdi? Nimalar sizni xursand yoki tashvishga soldi?"></textarea>
+        <div class="save-row">
+          <button class="btn btn-primary" id="journal-save-btn">Yozuvni saqlash</button>
+        </div>
+      </div>
+
+      <div class="entry-list" id="entry-list"></div>
+    </section>
+
+    <!-- ============ MAQSADLAR ============ -->
+    <section class="view" id="view-maqsadlar">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Rejalar</div>
+          <h1>Maqsadlar</h1>
+        </div>
+      </div>
+
+      <div class="goals-grid" id="goals-grid"></div>
+    </section>
+
+    <!-- ============ PROFIL ============ -->
+    <section class="view" id="view-profil">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Hisob</div>
+          <h1>Profil</h1>
+        </div>
+      </div>
+
+      <div class="card profile-head">
+        <div class="avatar">Y</div>
+        <div>
+          <div class="pname">Yusuf</div>
+          <div class="pemail">yusuf@habity.uz</div>
+          <div class="pjoined">Iyul 2026 dan beri a'zo</div>
+        </div>
+      </div>
+
+      <div class="profile-stats">
+        <div class="card pstat"><div class="num">6</div><div class="lbl">Faol odatlar</div></div>
+        <div class="card pstat"><div class="num">18</div><div class="lbl">Eng uzun streak</div></div>
+        <div class="card pstat"><div class="num">42</div><div class="lbl">Kundalik yozuvlar</div></div>
+        <div class="card pstat"><div class="num">3</div><div class="lbl">Faol maqsadlar</div></div>
+      </div>
+    </section>
+
+    <!-- ============ SOZLAMALAR ============ -->
+    <section class="view" id="view-sozlamalar">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Boshqaruv</div>
+          <h1>Sozlamalar</h1>
+        </div>
+      </div>
+
+      <div class="card settings-section">
+        <h3>Profil ma'lumotlari</h3>
+        <div class="field"><label>Ism</label><input type="text" value="Yusuf"></div>
+        <div class="field" style="margin-bottom:0;"><label>Email</label><input type="email" value="yusuf@habity.uz"></div>
+      </div>
+
+      <div class="card settings-section">
+        <h3>Ko'rinish</h3>
+        <div class="setting-row">
+          <div><div class="stitle">Tungi rejim</div><div class="sdesc">Ko'zga yumshoqroq, qorong'i mavzu</div></div>
+          <button class="toggle" id="dark-toggle" onclick="toggleDarkMode()"></button>
+        </div>
+      </div>
+
+      <div class="card settings-section">
+        <h3>Bildirishnomalar</h3>
+        <div class="setting-row">
+          <div><div class="stitle">Kunlik eslatma</div><div class="sdesc">Har kuni soat 20:00 da odatlaringizni belgilashni eslatadi</div></div>
+          <button class="toggle on" onclick="this.classList.toggle('on')"></button>
+        </div>
+        <div class="setting-row">
+          <div><div class="stitle">Streak ogohlantirishi</div><div class="sdesc">Streak uzilishi arafasida xabar beradi</div></div>
+          <button class="toggle on" onclick="this.classList.toggle('on')"></button>
+        </div>
+        <div class="setting-row">
+          <div><div class="stitle">Haftalik hisobot</div><div class="sdesc">Har yakshanba progress xulosasi yuboriladi</div></div>
+          <button class="toggle" onclick="this.classList.toggle('on')"></button>
+        </div>
+      </div>
+
+      <div class="card settings-section">
+        <h3>Boshqalar</h3>
+        <div class="setting-row">
+          <div><div class="stitle">AI yordamchi</div><div class="sdesc">Tez kunda: kundaligingiz asosida shaxsiy tavsiyalar</div></div>
+          <span class="mono" style="font-size:11.5px; color:var(--ink-faint); background:var(--bg); padding:4px 9px; border-radius:20px;">Tez kunda</span>
+        </div>
+      </div>
+
+      <div class="card settings-section danger-zone">
+        <h3>Xavfli hudud</h3>
+        <div class="setting-row">
+          <div><div class="stitle">Chiqish</div></div>
+          <button class="btn btn-ghost" onclick="exitApp()">Chiqish</button>
+        </div>
+        <div class="setting-row">
+          <div><div class="stitle">Hisobni o'chirish</div><div class="sdesc">Bu amalni ortga qaytarib bo'lmaydi</div></div>
+          <button class="btn btn-ghost" style="color:var(--danger); border-color:#E7D2CC;">O'chirish</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
