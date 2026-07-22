@@ -44,11 +44,12 @@ function exitApp(){
 }
 
 // ---------- View switching ----------
-function showView(name, btn){
+function showView(name){
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  if(btn) btn.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    n.classList.toggle('active', n.dataset.view === name);
+  });
 }
 
 // ---------- Dark mode ----------
@@ -158,46 +159,75 @@ function renameHabit(id, newName){
   renderAll();
 }
 
-function renderHabits(){
-  const el = document.getElementById('habit-list');
-  if(!el) return;
-  const today = todayISO();
-  const days = lastNDates(7);
+function daysInMonth(year, month){ return new Date(year, month + 1, 0).getDate(); }
 
-  let rowsHtml = '';
-  if(state.habits.length === 0){
-    rowsHtml = `<div class="empty-state">Hali odat qo'shilmagan.<br>Pastdagi maydondan birinchi odatingizni qo'shing.</div>`;
-  }else{
-    rowsHtml = state.habits.map(h => {
-      const todayStatus = h.logs[today] || null;
-      const streak = computeCurrentStreak(h);
-      const dots = days.map(d => {
-        const k = isoDate(d);
-        const s = h.logs[k];
-        const cls = s ? ('on-' + s) : '';
-        return `<span class="${cls}"></span>`;
-      }).join('');
-      return `
-        <div class="habit-row">
-          <div class="check ${todayStatus ? 'state-' + todayStatus : ''}" title="Bugungi holatni belgilash uchun bosing" onclick="cycleStatus('${h.id}','${today}')">${checkIcon()}</div>
-          <div class="habit-info">
-            <div class="hname" data-id="${h.id}" onblur="renameHabit('${h.id}', this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}">${escapeHtml(h.name)}</div>
-            <div class="dotchain">${dots}</div>
-          </div>
-          <div class="streak-badge">🔥 ${streak}</div>
-          <div class="habit-actions">
-            <button class="icon-btn" title="Nomini tahrirlash" onclick="editHabitName('${h.id}')">${editIcon()}</button>
-            <button class="icon-btn danger" title="O'chirish" onclick="deleteHabit('${h.id}')">${trashIcon()}</button>
-          </div>
-        </div>`;
-    }).join('');
+function currentMonthDates(){
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth();
+  const total = daysInMonth(y, m);
+  const arr = [];
+  for(let day = 1; day <= total; day++) arr.push(new Date(y, m, day));
+  return arr;
+}
+
+function renderHabits(){
+  const tableEl = document.getElementById('habit-grid-table');
+  const monthLabelEl = document.getElementById('grid-month-label');
+  const emptyEl = document.getElementById('habit-grid-empty');
+  if(!tableEl) return;
+
+  const today = todayISO();
+  const monthDates = currentMonthDates();
+  if(monthLabelEl){
+    monthLabelEl.textContent = new Date().toLocaleDateString('uz-UZ', { month: 'long', year: 'numeric' });
   }
 
-  el.innerHTML = rowsHtml + `
-    <div class="add-habit-row">
-      <input type="text" id="new-habit-input" placeholder="Yangi odat qo'shish, masalan: Kuniga 30 daqiqa yugurish" onkeydown="if(event.key==='Enter'){ addHabit(this.value); this.value=''; }">
-      <button class="btn btn-primary" onclick="const i=document.getElementById('new-habit-input'); addHabit(i.value); i.value='';">Qo'shish</button>
-    </div>`;
+  if(state.habits.length === 0){
+    tableEl.innerHTML = '';
+    tableEl.style.display = 'none';
+    if(emptyEl) emptyEl.style.display = 'block';
+    return;
+  }
+  tableEl.style.display = '';
+  if(emptyEl) emptyEl.style.display = 'none';
+
+  const headCells = monthDates.map(d => {
+    const isToday = isoDate(d) === today;
+    return `<th class="${isToday ? 'today-col' : ''}">${d.getDate()}</th>`;
+  }).join('');
+
+  const bodyRows = state.habits.map(h => {
+    const streak = computeCurrentStreak(h);
+    const dayCells = monthDates.map(d => {
+      const k = isoDate(d);
+      const isFuture = k > today;
+      const s = h.logs[k];
+      const cls = ['grid-dot'];
+      if(s) cls.push('state-' + s);
+      if(k === today) cls.push('is-today');
+      if(isFuture) cls.push('future');
+      const clickAttr = isFuture ? '' : ` onclick="cycleStatus('${h.id}','${k}')"`;
+      return `<td class="hcell-day"><div class="${cls.join(' ')}"${clickAttr} title="${d.getDate()}-kun"></div></td>`;
+    }).join('');
+    return `
+      <tr>
+        <td class="hcell-name"><div class="hname" data-id="${h.id}" onblur="renameHabit('${h.id}', this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}">${escapeHtml(h.name)}</div></td>
+        ${dayCells}
+        <td class="hcell-meta">
+          <div class="hcell-meta-inner">
+            <div class="streak-badge">🔥 ${streak}</div>
+            <div class="habit-actions">
+              <button class="icon-btn" title="Nomini tahrirlash" onclick="editHabitName('${h.id}')">${editIcon()}</button>
+              <button class="icon-btn danger" title="O'chirish" onclick="deleteHabit('${h.id}')">${trashIcon()}</button>
+            </div>
+          </div>
+        </td>
+      </tr>`;
+  }).join('');
+
+  tableEl.innerHTML = `
+    <thead><tr><th class="hcell-name-head"></th>${headCells}<th></th></tr></thead>
+    <tbody>${bodyRows}</tbody>`;
 }
 
 function editHabitName(id){
@@ -207,6 +237,7 @@ function editHabitName(id){
   nameEl.focus();
   document.execCommand && document.execCommand('selectAll', false, null);
 }
+
 
 function escapeHtml(str){
   const div = document.createElement('div');
@@ -443,6 +474,23 @@ function makeGoalEditable(id){
 }
 
 // =====================================================
+// PROFIL
+// =====================================================
+function renderProfile(){
+  const activeHabitsEl = document.getElementById('profile-active-habits');
+  const longestEl = document.getElementById('profile-longest-streak');
+  const journalCountEl = document.getElementById('profile-journal-count');
+  const activeGoalsEl = document.getElementById('profile-active-goals');
+  if(!activeHabitsEl) return;
+
+  const longest = state.habits.length ? Math.max(0, ...state.habits.map(computeLongestStreak)) : 0;
+  activeHabitsEl.textContent = state.habits.length;
+  longestEl.textContent = longest;
+  journalCountEl.textContent = state.journal.length;
+  activeGoalsEl.textContent = state.goals.filter(g => g.percent < 100).length;
+}
+
+// =====================================================
 // INIT
 // =====================================================
 function renderAll(){
@@ -451,6 +499,7 @@ function renderAll(){
   renderGoals();
   renderJournal();
   renderStats();
+  renderProfile();
   wireJournalForms();
 }
 
