@@ -67,27 +67,27 @@
   <aside class="sidebar">
     <div class="brand"><img class="brand-logo" src="img/logo.png" alt="HabitY"></div>
     <nav>
-      <button class="nav-item active" data-view="dashboard" onclick="showView('dashboard', this)">
+      <button class="nav-item active" data-view="dashboard" onclick="showView('dashboard')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
         Bosh sahifa
       </button>
-      <button class="nav-item" data-view="statistika" onclick="showView('statistika', this)">
+      <button class="nav-item" data-view="statistika" onclick="showView('statistika')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V10M12 19V5M20 19v-7"/></svg>
         Statistika
       </button>
-      <button class="nav-item" data-view="kundalik" onclick="showView('kundalik', this)">
+      <button class="nav-item" data-view="kundalik" onclick="showView('kundalik')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h11a2 2 0 0 1 2 2v14l-4-2-4 2-4-2-4 2V6a2 2 0 0 1 2-2Z"/></svg>
         Kundalik
       </button>
-      <button class="nav-item" data-view="maqsadlar" onclick="showView('maqsadlar', this)">
+      <button class="nav-item" data-view="maqsadlar" onclick="showView('maqsadlar')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="0.8" fill="currentColor"/></svg>
         Maqsadlar
       </button>
-      <button class="nav-item" data-view="profil" onclick="showView('profil', this)">
+      <button class="nav-item" data-view="profil" onclick="showView('profil')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20c1.5-4 4-6 7.5-6s6 2 7.5 6"/></svg>
         Profil
       </button>
-      <button class="nav-item" data-view="sozlamalar" onclick="showView('sozlamalar', this)">
+      <button class="nav-item" data-view="sozlamalar" onclick="showView('sozlamalar')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.55V19.5a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.98 17.86a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1.03H2.5a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.14 6.98a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H8.6a1.7 1.7 0 0 0 1.03-1.55V.5a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.03 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V6.6a1.7 1.7 0 0 0 1.55 1.03h.09a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1.03Z"/></svg>
         Sozlamalar
       </button>
@@ -115,38 +115,49 @@
         <div class="today mono" id="today-date"></div>
       </div>
 
-      <div class="dash-grid">
-        <div class="card habit-list" id="habit-list">
-          <!-- habit rows injected by JS -->
+      <div class="card habit-grid-card">
+        <div class="grid-legend">
+          <span><span class="legend-dot green"></span>Bajarildi</span>
+          <span><span class="legend-dot yellow"></span>Yarmigacha</span>
+          <span><span class="legend-dot red"></span>Bajarilmadi</span>
+          <span class="grid-month mono" id="grid-month-label"></span>
+        </div>
+        <div class="grid-scroll">
+          <table class="habit-grid" id="habit-grid-table"></table>
+        </div>
+        <div class="empty-state" id="habit-grid-empty" style="display:none;">Hali odat qo'shilmagan.<br>Pastdagi maydondan birinchi odatingizni qo'shing.</div>
+        <div class="add-habit-row">
+          <input type="text" id="new-habit-input" placeholder="Yangi odat qo'shish, masalan: Kuniga 30 daqiqa yugurish" onkeydown="if(event.key==='Enter'){ addHabit(this.value); this.value=''; }">
+          <button class="btn btn-primary" onclick="const i=document.getElementById('new-habit-input'); addHabit(i.value); i.value='';">Qo'shish</button>
+        </div>
+      </div>
+
+      <div class="side-row">
+        <div class="card mood-card">
+          <div class="rownum">
+            <div>
+              <div class="big" id="mood-avg">—</div>
+              <div class="label">Haftalik o'rtacha kayfiyat</div>
+            </div>
+            <svg width="46" height="30" viewBox="0 0 46 30" fill="none"><path d="M1 22 L10 15 L18 20 L27 8 L36 12 L45 4" stroke="#3F6B54" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
         </div>
 
-        <div class="side-col">
-          <div class="card mood-card">
-            <div class="rownum">
-              <div>
-                <div class="big" id="mood-avg">7.2</div>
-                <div class="label">Haftalik o'rtacha kayfiyat</div>
-              </div>
-              <svg width="46" height="30" viewBox="0 0 46 30" fill="none"><path d="M1 22 L10 15 L18 20 L27 8 L36 12 L45 4" stroke="#3F6B54" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </div>
+        <div class="card quicklog">
+          <h3>Bugungi holat</h3>
+          <div class="slider-block">
+            <div class="slider-label"><span>Kayfiyat</span><span class="val" id="mood-val">5</span></div>
+            <input type="range" min="1" max="10" value="5" oninput="document.getElementById('mood-val').textContent=this.value">
           </div>
-
-          <div class="card quicklog">
-            <h3>Bugungi holat</h3>
-            <div class="slider-block">
-              <div class="slider-label"><span>Kayfiyat</span><span class="val" id="mood-val">7</span></div>
-              <input type="range" min="1" max="10" value="7" oninput="document.getElementById('mood-val').textContent=this.value">
-            </div>
-            <div class="slider-block">
-              <div class="slider-label"><span>Uyqu sifati</span><span class="val" id="sleep-val">6</span></div>
-              <input type="range" min="1" max="10" value="6" oninput="document.getElementById('sleep-val').textContent=this.value">
-            </div>
-            <div class="slider-block journal-mini">
-              <label class="slider-label"><span>Bugun nima bo'ldi?</span></label>
-              <textarea id="dash-journal-textarea" placeholder="Bir necha jumla yozing..."></textarea>
-            </div>
-            <button class="btn btn-primary" style="width:100%; margin-top:6px;" id="dash-save-btn">Kundalikka saqlash</button>
+          <div class="slider-block">
+            <div class="slider-label"><span>Uyqu sifati</span><span class="val" id="sleep-val">5</span></div>
+            <input type="range" min="1" max="10" value="5" oninput="document.getElementById('sleep-val').textContent=this.value">
           </div>
+          <div class="slider-block journal-mini">
+            <label class="slider-label"><span>Bugun nima bo'ldi?</span></label>
+            <textarea id="dash-journal-textarea" placeholder="Bir necha jumla yozing..."></textarea>
+          </div>
+          <button class="btn btn-primary" style="width:100%; margin-top:6px;" id="dash-save-btn">Kundalikka saqlash</button>
         </div>
       </div>
     </section>
@@ -238,10 +249,10 @@
       </div>
 
       <div class="profile-stats">
-        <div class="card pstat"><div class="num">6</div><div class="lbl">Faol odatlar</div></div>
-        <div class="card pstat"><div class="num">18</div><div class="lbl">Eng uzun streak</div></div>
-        <div class="card pstat"><div class="num">42</div><div class="lbl">Kundalik yozuvlar</div></div>
-        <div class="card pstat"><div class="num">3</div><div class="lbl">Faol maqsadlar</div></div>
+        <div class="card pstat"><div class="num" id="profile-active-habits">0</div><div class="lbl">Faol odatlar</div></div>
+        <div class="card pstat"><div class="num" id="profile-longest-streak">0</div><div class="lbl">Eng uzun streak</div></div>
+        <div class="card pstat"><div class="num" id="profile-journal-count">0</div><div class="lbl">Kundalik yozuvlar</div></div>
+        <div class="card pstat"><div class="num" id="profile-active-goals">0</div><div class="lbl">Faol maqsadlar</div></div>
       </div>
     </section>
 
@@ -306,6 +317,33 @@
     </section>
 
   </main>
+
+  <nav class="mobile-nav">
+    <button class="nav-item mnav-item active" data-view="dashboard" onclick="showView('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      <span>Bosh</span>
+    </button>
+    <button class="nav-item mnav-item" data-view="statistika" onclick="showView('statistika')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V10M12 19V5M20 19v-7"/></svg>
+      <span>Statistika</span>
+    </button>
+    <button class="nav-item mnav-item" data-view="kundalik" onclick="showView('kundalik')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h11a2 2 0 0 1 2 2v14l-4-2-4 2-4-2-4 2V6a2 2 0 0 1 2-2Z"/></svg>
+      <span>Kundalik</span>
+    </button>
+    <button class="nav-item mnav-item" data-view="maqsadlar" onclick="showView('maqsadlar')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="0.8" fill="currentColor"/></svg>
+      <span>Maqsad</span>
+    </button>
+    <button class="nav-item mnav-item" data-view="profil" onclick="showView('profil')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20c1.5-4 4-6 7.5-6s6 2 7.5 6"/></svg>
+      <span>Profil</span>
+    </button>
+    <button class="nav-item mnav-item" data-view="sozlamalar" onclick="showView('sozlamalar')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.55V19.5a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.98 17.86a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1.03H2.5a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.14 6.98a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H8.6a1.7 1.7 0 0 0 1.03-1.55V.5a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.03 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V6.6a1.7 1.7 0 0 0 1.55 1.03h.09a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1.03Z"/></svg>
+      <span>Sozlama</span>
+    </button>
+  </nav>
 </div>
 
 <script src="js/app.js"></script>
