@@ -3,7 +3,8 @@
 // =====================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
 import {
-  getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut
+  getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, updateProfile,
+  onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import {
   getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc,
@@ -56,11 +57,17 @@ function signOutUser(){
   signOut(auth).catch(err => console.error('Sign-out error', err));
 }
 
-function toggleAuth(){
-  const l = document.getElementById('login-form');
-  const r = document.getElementById('register-form');
-  l.style.display = l.style.display === 'none' ? 'block' : 'none';
-  r.style.display = r.style.display === 'none' ? 'block' : 'none';
+function continueWithName(){
+  const input = document.getElementById('guest-name');
+  const name = (input ? input.value : '').trim();
+  if(!name){ alert("Iltimos, avval ismingizni kiriting."); return; }
+  signInAnonymously(auth)
+    .then(cred => updateProfile(cred.user, { displayName: name }))
+    .then(() => { if(auth.currentUser) applyUserUI(auth.currentUser); })
+    .catch(err => {
+      console.error('Anonymous sign-in error', err);
+      alert("Kirishda xatolik: " + err.message);
+    });
 }
 
 function unsubscribeAll(){
@@ -93,7 +100,7 @@ function subscribeToUserData(uid){
 function applyUserUI(user){
   const name = user.displayName || 'Foydalanuvchi';
   const firstName = name.split(' ')[0];
-  const email = user.email || '';
+  const email = user.email || 'Mehmon hisobi';
   const initial = name.charAt(0).toUpperCase();
   const photo = user.photoURL;
   const avatarHtml = photo
@@ -597,7 +604,7 @@ refreshDateHeaders();
 // Expose functions referenced by inline HTML onclick/onblur/onkeydown handlers
 // (required because ES module scope doesn't leak to window automatically)
 Object.assign(window, {
-  showView, toggleAuth, signInWithGoogle, signOutUser, toggleDarkMode,
+  showView, continueWithName, signInWithGoogle, signOutUser, toggleDarkMode,
   cycleStatus, addHabit, deleteHabit, renameHabit, editHabitName,
   addGoal, deleteGoal, updateGoalPercent, renameGoalField, toggleAddGoalForm, makeGoalEditable,
   deleteJournalEntry
