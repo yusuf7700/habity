@@ -196,6 +196,17 @@
         <div class="today mono" id="today-date-2"></div>
       </div>
 
+      <div class="card ai-analysis-card">
+        <div class="ai-analysis-head">
+          <div>
+            <h3>AI tahlili</h3>
+            <p class="ai-analysis-sub">So'nggi kundalik yozuvlaringiz asosida shaxsiy maslahat oling</p>
+          </div>
+          <button class="btn btn-primary" id="ai-analyze-btn" onclick="analyzeJournal()">Tahlil qilish</button>
+        </div>
+        <div id="ai-analysis-result" class="ai-analysis-result" style="display:none;"></div>
+      </div>
+
       <div class="card journal-editor">
         <div class="sliders-row">
           <div class="slider-block">
@@ -296,6 +307,10 @@
           <div><div class="stitle">Telefon/kompyuterga o'rnatish</div><div class="sdesc">HabitY'ni ilova sifatida o'rnating — tezroq ochiladi, bosh ekranda alohida ikonka bo'ladi</div></div>
           <button class="btn btn-primary" id="install-app-btn" onclick="installApp()">O'rnatish</button>
         </div>
+        <div class="setting-row">
+          <div><div class="stitle">Keshni tozalash</div><div class="sdesc">Sayt eski holatda ko'rinsa yoki yangilanish chiqmasa, shuni bosing</div></div>
+          <button class="btn btn-ghost" onclick="clearCache()">Tozalash</button>
+        </div>
       </div>
 
       <div class="card settings-section">
@@ -338,8 +353,8 @@
       <div class="card settings-section">
         <h3>Boshqalar</h3>
         <div class="setting-row">
-          <div><div class="stitle">AI yordamchi</div><div class="sdesc">Tez kunda: kundaligingiz asosida shaxsiy tavsiyalar</div></div>
-          <span class="mono" style="font-size:11.5px; color:var(--ink-faint); background:var(--bg); padding:4px 9px; border-radius:20px;">Tez kunda</span>
+          <div><div class="stitle">AI yordamchi</div><div class="sdesc">Kundaligingiz asosida shaxsiy tavsiyalar — Kundalik sahifasida mavjud</div></div>
+          <button class="btn btn-ghost" onclick="showView('kundalik')">Ochish</button>
         </div>
       </div>
 
