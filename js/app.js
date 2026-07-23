@@ -4,7 +4,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, updateProfile,
-  onAuthStateChanged, signOut
+  linkWithPopup, onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import {
   getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc,
@@ -55,6 +55,20 @@ function signInWithGoogle(){
 }
 function signOutUser(){
   signOut(auth).catch(err => console.error('Sign-out error', err));
+}
+
+function linkGoogleAccount(){
+  if(!currentUser) return;
+  linkWithPopup(currentUser, googleProvider)
+    .then(cred => { applyUserUI(cred.user); })
+    .catch(err => {
+      console.error('Link account error', err);
+      if(err.code === 'auth/credential-already-in-use'){
+        alert("Bu Google hisobi allaqachon boshqa HabitY hisobiga ulangan. Iltimos, chiqib, to'g'ridan-to'g'ri Google orqali kiring.");
+      }else{
+        alert("Bog'lashda xatolik: " + err.message);
+      }
+    });
 }
 
 function continueWithName(){
@@ -131,7 +145,39 @@ function applyUserUI(user){
   if(settingsName) settingsName.value = name;
   if(settingsEmail) settingsEmail.value = email;
 
+  const linkSection = document.getElementById('link-account-section');
+  if(linkSection) linkSection.style.display = user.isAnonymous ? 'block' : 'none';
+
   document.querySelectorAll('.dash-greeting-name').forEach(el => { el.textContent = firstName; });
+}
+
+function editProfileName(){
+  const nameEl = document.getElementById('profile-name');
+  if(!nameEl) return;
+  nameEl.setAttribute('contenteditable', 'true');
+  nameEl.focus();
+  document.execCommand && document.execCommand('selectAll', false, null);
+}
+function saveProfileName(newName){
+  const trimmed = (newName || '').trim();
+  const nameEl = document.getElementById('profile-name');
+  if(nameEl) nameEl.setAttribute('contenteditable', 'false');
+  if(!trimmed || !currentUser) return;
+  updateProfile(currentUser, { displayName: trimmed })
+    .then(() => applyUserUI(auth.currentUser))
+    .catch(err => alert("Ismni saqlashda xatolik: " + err.message));
+}
+
+function copyCardNumber(){
+  const raw = "5614684705391512";
+  const label = document.getElementById('card-number-text');
+  navigator.clipboard.writeText(raw).then(() => {
+    if(label){
+      const old = label.textContent;
+      label.textContent = "Nusxalandi!";
+      setTimeout(() => { label.textContent = old; }, 1500);
+    }
+  }).catch(() => alert("Nusxalashda xatolik. Raqam: " + raw));
 }
 
 onAuthStateChanged(auth, user => {
@@ -586,6 +632,39 @@ function renderProfile(){
 }
 
 // =====================================================
+// PWA — ilova sifatida o'rnatish
+// =====================================================
+let deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  const btn = document.getElementById('install-app-btn');
+  if(btn) btn.textContent = "O'rnatish";
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+});
+
+function installApp(){
+  if(deferredInstallPrompt){
+    deferredInstallPrompt.prompt();
+    deferredInstallPrompt.userChoice.finally(() => { deferredInstallPrompt = null; });
+  }else if(window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone){
+    alert("HabitY allaqachon ilova sifatida o'rnatilgan.");
+  }else{
+    alert("Brauzeringiz avtomatik o'rnatishni qo'llab-quvvatlamaydi. iPhone/iPad'da: pastdagi Share tugmasi → \"Add to Home Screen\"ni tanlang.");
+  }
+}
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW registration failed', err));
+  });
+}
+
+// =====================================================
 // INIT
 // =====================================================
 function renderAll(){
@@ -604,8 +683,8 @@ refreshDateHeaders();
 // Expose functions referenced by inline HTML onclick/onblur/onkeydown handlers
 // (required because ES module scope doesn't leak to window automatically)
 Object.assign(window, {
-  showView, continueWithName, signInWithGoogle, signOutUser, toggleDarkMode,
+  showView, continueWithName, signInWithGoogle, signOutUser, linkGoogleAccount, toggleDarkMode,
   cycleStatus, addHabit, deleteHabit, renameHabit, editHabitName,
   addGoal, deleteGoal, updateGoalPercent, renameGoalField, toggleAddGoalForm, makeGoalEditable,
-  deleteJournalEntry
+  deleteJournalEntry, editProfileName, saveProfileName, copyCardNumber, installApp
 });
