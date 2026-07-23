@@ -238,6 +238,12 @@ function editIcon(){
 function trashIcon(){
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
 }
+function upIcon(){
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>';
+}
+function downIcon(){
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+}
 function escapeHtml(str){
   const div = document.createElement('div');
   div.textContent = str;
@@ -256,13 +262,14 @@ function lastNDates(n){
   }
   return arr;
 }
-function daysInMonth(year, month){ return new Date(year, month + 1, 0).getDate(); }
-function currentMonthDates(){
-  const now = new Date();
-  const y = now.getFullYear(), m = now.getMonth();
-  const total = daysInMonth(y, m);
+function recentDatesForGrid(n){
+  // Index 0 = bugun (eng chapda), keyingilar orqaga qarab (kecha, undan oldingi...)
   const arr = [];
-  for(let day = 1; day <= total; day++) arr.push(new Date(y, m, day));
+  for(let i = 0; i < n; i++){
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    arr.push(d);
+  }
   return arr;
 }
 
@@ -310,11 +317,37 @@ function computeLongestStreak(habit){
   return longest;
 }
 
+function getSortedHabits(){
+  return state.habits
+    .map((h, i) => ({ h, fallback: i }))
+    .sort((a, b) => {
+      const oa = typeof a.h.order === 'number' ? a.h.order : a.fallback;
+      const ob = typeof b.h.order === 'number' ? b.h.order : b.fallback;
+      return oa - ob;
+    })
+    .map(x => x.h);
+}
+
 function addHabit(name){
   const trimmed = (name || '').trim();
   if(!trimmed || !currentUser) return;
-  addDoc(collection(db, 'users', currentUser.uid, 'habits'), { name: trimmed, logs: {}, createdAt: serverTimestamp() })
+  const maxOrder = state.habits.reduce((m, h) => Math.max(m, typeof h.order === 'number' ? h.order : 0), -1);
+  addDoc(collection(db, 'users', currentUser.uid, 'habits'), { name: trimmed, logs: {}, order: maxOrder + 1, createdAt: serverTimestamp() })
     .catch(err => alert("Odat qo'shishda xatolik: " + err.message));
+}
+function moveHabit(id, direction){
+  if(!currentUser) return;
+  const sorted = getSortedHabits();
+  const idx = sorted.findIndex(h => h.id === id);
+  const swapIdx = idx + direction;
+  if(idx === -1 || swapIdx < 0 || swapIdx >= sorted.length) return;
+  const a = sorted[idx], b = sorted[swapIdx];
+  const orderA = typeof a.order === 'number' ? a.order : idx;
+  const orderB = typeof b.order === 'number' ? b.order : swapIdx;
+  Promise.all([
+    updateDoc(doc(db, 'users', currentUser.uid, 'habits', a.id), { order: orderB }),
+    updateDoc(doc(db, 'users', currentUser.uid, 'habits', b.id), { order: orderA })
+  ]).catch(err => console.error('reorder error', err));
 }
 function deleteHabit(id){
   if(!currentUser) return;
@@ -341,7 +374,7 @@ function renderHabits(){
   if(!tableEl) return;
 
   const today = todayISO();
-  const monthDates = currentMonthDates();
+  const gridDates = recentDatesForGrid(60);
   if(monthLabelEl){
     monthLabelEl.textContent = new Date().toLocaleDateString('uz-UZ', { month: 'long', year: 'numeric' });
   }
@@ -355,24 +388,26 @@ function renderHabits(){
   tableEl.style.display = '';
   if(emptyEl) emptyEl.style.display = 'none';
 
-  const headCells = monthDates.map(d => {
-    const isToday = isoDate(d) === today;
-    return `<th class="${isToday ? 'today-col' : ''}">${d.getDate()}</th>`;
+  const sortedHabits = getSortedHabits();
+
+  const headCells = gridDates.map((d, i) => {
+    const isToday = i === 0;
+    const label = isToday ? 'Bugun' : String(d.getDate());
+    return `<th class="${isToday ? 'today-col' : ''}">${label}</th>`;
   }).join('');
 
-  const bodyRows = state.habits.map(h => {
+  const bodyRows = sortedHabits.map((h, rowIdx) => {
     const streak = computeCurrentStreak(h);
-    const dayCells = monthDates.map(d => {
+    const dayCells = gridDates.map((d, i) => {
       const k = isoDate(d);
-      const isFuture = k > today;
       const s = h.logs[k];
       const cls = ['grid-dot'];
       if(s) cls.push('state-' + s);
-      if(k === today) cls.push('is-today');
-      if(isFuture) cls.push('future');
-      const clickAttr = isFuture ? '' : ` onclick="cycleStatus('${h.id}','${k}')"`;
-      return `<td class="hcell-day"><div class="${cls.join(' ')}"${clickAttr} title="${d.getDate()}-kun"></div></td>`;
+      if(i === 0) cls.push('is-today');
+      return `<td class="hcell-day"><div class="${cls.join(' ')}" onclick="cycleStatus('${h.id}','${k}')" title="${d.getDate()}-kun"></div></td>`;
     }).join('');
+    const isFirst = rowIdx === 0;
+    const isLast = rowIdx === sortedHabits.length - 1;
     return `
       <tr>
         <td class="hcell-name"><div class="hname" data-id="${h.id}" onblur="renameHabit('${h.id}', this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}">${escapeHtml(h.name)}</div></td>
@@ -381,6 +416,8 @@ function renderHabits(){
           <div class="hcell-meta-inner">
             <div class="streak-badge">🔥 ${streak}</div>
             <div class="habit-actions">
+              <button class="icon-btn ${isFirst ? 'is-disabled' : ''}" title="Yuqoriga surish" onclick="moveHabit('${h.id}', -1)">${upIcon()}</button>
+              <button class="icon-btn ${isLast ? 'is-disabled' : ''}" title="Pastga surish" onclick="moveHabit('${h.id}', 1)">${downIcon()}</button>
               <button class="icon-btn" title="Nomini tahrirlash" onclick="editHabitName('${h.id}')">${editIcon()}</button>
               <button class="icon-btn danger" title="O'chirish" onclick="deleteHabit('${h.id}')">${trashIcon()}</button>
             </div>
@@ -684,7 +721,7 @@ refreshDateHeaders();
 // (required because ES module scope doesn't leak to window automatically)
 Object.assign(window, {
   showView, continueWithName, signInWithGoogle, signOutUser, linkGoogleAccount, toggleDarkMode,
-  cycleStatus, addHabit, deleteHabit, renameHabit, editHabitName,
+  cycleStatus, addHabit, deleteHabit, renameHabit, editHabitName, moveHabit,
   addGoal, deleteGoal, updateGoalPercent, renameGoalField, toggleAddGoalForm, makeGoalEditable,
   deleteJournalEntry, editProfileName, saveProfileName, copyCardNumber, installApp
 });
