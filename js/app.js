@@ -30,7 +30,12 @@ let currentUser = null;
 let unsubscribers = [];
 let showAddGoalForm = false;
 
-function isoDate(d){ return d.toISOString().slice(0,10); }
+function isoDate(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 function todayISO(){ return isoDate(new Date()); }
 
 function loadDarkPref(){
@@ -563,6 +568,40 @@ function renderJournal(){
   }
 }
 
+async function analyzeJournal(){
+  const btn = document.getElementById('ai-analyze-btn');
+  const resultEl = document.getElementById('ai-analysis-result');
+  if(!btn || !resultEl) return;
+
+  if(state.journal.length === 0){
+    alert("Tahlil qilish uchun avval kamida bitta kundalik yozuvi kerak.");
+    return;
+  }
+
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Tahlil qilinmoqda...';
+
+  try{
+    const sorted = [...state.journal].sort((a,b) => b.date.localeCompare(a.date)).slice(0, 14);
+    const response = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ entries: sorted })
+    });
+    const data = await response.json();
+    if(!response.ok) throw new Error(data.error || 'Xatolik yuz berdi.');
+    resultEl.textContent = data.analysis;
+    resultEl.style.display = 'block';
+  }catch(err){
+    console.error('AI analysis error', err);
+    alert("Tahlilda xatolik: " + err.message);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
 function wireJournalForms(){
   const saveBtn = document.getElementById('journal-save-btn');
   if(saveBtn){
@@ -722,6 +761,18 @@ if('serviceWorker' in navigator){
   });
 }
 
+function clearCache(){
+  if(!confirm("Keshni tozalash sahifani qayta yuklaydi. Davom etamizmi?")) return;
+  const done = () => { window.location.reload(); };
+  const clearCaches = ('caches' in window)
+    ? caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
+    : Promise.resolve();
+  const clearSW = ('serviceWorker' in navigator)
+    ? navigator.serviceWorker.getRegistrations().then(regs => Promise.all(regs.map(r => r.unregister())))
+    : Promise.resolve();
+  Promise.all([clearCaches, clearSW]).then(done).catch(done);
+}
+
 // =====================================================
 // INIT
 // =====================================================
@@ -744,5 +795,5 @@ Object.assign(window, {
   showView, continueWithName, signInWithGoogle, signOutUser, linkGoogleAccount, toggleDarkMode,
   cycleStatus, addHabit, deleteHabit, renameHabit, editHabitName, moveHabit,
   addGoal, deleteGoal, updateGoalPercent, renameGoalField, toggleAddGoalForm, makeGoalEditable,
-  deleteJournalEntry, editProfileName, saveProfileName, copyCardNumber, installApp
+  deleteJournalEntry, editProfileName, saveProfileName, copyCardNumber, installApp, clearCache, analyzeJournal
 });
