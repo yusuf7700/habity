@@ -96,7 +96,12 @@ function subscribeToUserData(uid){
   const goalsCol = collection(db, 'users', uid, 'goals');
 
   unsubscribers.push(onSnapshot(habitsCol, snap => {
-    state.habits = snap.docs.map(d => ({ id: d.id, name: d.data().name || '', logs: d.data().logs || {} }));
+    state.habits = snap.docs.map(d => ({ id: d.id, name: d.data().name || '', logs: d.data().logs || {}, order: d.data().order }));
+    state.habits.forEach((h, i) => {
+      if(typeof h.order !== 'number'){
+        updateDoc(doc(db, 'users', uid, 'habits', h.id), { order: i }).catch(() => {});
+      }
+    });
     renderAll();
   }, err => console.error('Habits sync error', err)));
 
@@ -262,14 +267,13 @@ function lastNDates(n){
   }
   return arr;
 }
-function recentDatesForGrid(n){
-  // Index 0 = bugun (eng chapda), keyingilar orqaga qarab (kecha, undan oldingi...)
+function daysInMonth(year, month){ return new Date(year, month + 1, 0).getDate(); }
+function currentMonthDates(){
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth();
+  const total = daysInMonth(y, m);
   const arr = [];
-  for(let i = 0; i < n; i++){
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    arr.push(d);
-  }
+  for(let day = 1; day <= total; day++) arr.push(new Date(y, m, day));
   return arr;
 }
 
@@ -331,7 +335,7 @@ function getSortedHabits(){
 function addHabit(name){
   const trimmed = (name || '').trim();
   if(!trimmed || !currentUser) return;
-  const maxOrder = state.habits.reduce((m, h) => Math.max(m, typeof h.order === 'number' ? h.order : 0), -1);
+  const maxOrder = state.habits.reduce((m, h, i) => Math.max(m, typeof h.order === 'number' ? h.order : i), -1);
   addDoc(collection(db, 'users', currentUser.uid, 'habits'), { name: trimmed, logs: {}, order: maxOrder + 1, createdAt: serverTimestamp() })
     .catch(err => alert("Odat qo'shishda xatolik: " + err.message));
 }
@@ -369,12 +373,13 @@ function editHabitName(id){
 
 function renderHabits(){
   const tableEl = document.getElementById('habit-grid-table');
+  const scrollEl = document.getElementById('habit-grid-scroll');
   const monthLabelEl = document.getElementById('grid-month-label');
   const emptyEl = document.getElementById('habit-grid-empty');
   if(!tableEl) return;
 
   const today = todayISO();
-  const gridDates = recentDatesForGrid(60);
+  const monthDates = currentMonthDates();
   if(monthLabelEl){
     monthLabelEl.textContent = new Date().toLocaleDateString('uz-UZ', { month: 'long', year: 'numeric' });
   }
@@ -390,34 +395,42 @@ function renderHabits(){
 
   const sortedHabits = getSortedHabits();
 
-  const headCells = gridDates.map((d, i) => {
-    const isToday = i === 0;
-    const label = isToday ? 'Bugun' : String(d.getDate());
-    return `<th class="${isToday ? 'today-col' : ''}">${label}</th>`;
+  const headCells = monthDates.map(d => {
+    const isToday = isoDate(d) === today;
+    return `<th class="${isToday ? 'today-col' : ''}" ${isToday ? 'id="today-col-marker"' : ''}>${d.getDate()}</th>`;
   }).join('');
 
   const bodyRows = sortedHabits.map((h, rowIdx) => {
     const streak = computeCurrentStreak(h);
-    const dayCells = gridDates.map((d, i) => {
+    const dayCells = monthDates.map(d => {
       const k = isoDate(d);
+      const isFuture = k > today;
       const s = h.logs[k];
       const cls = ['grid-dot'];
       if(s) cls.push('state-' + s);
-      if(i === 0) cls.push('is-today');
-      return `<td class="hcell-day"><div class="${cls.join(' ')}" onclick="cycleStatus('${h.id}','${k}')" title="${d.getDate()}-kun"></div></td>`;
+      if(k === today) cls.push('is-today');
+      if(isFuture) cls.push('future');
+      const clickAttr = isFuture ? '' : ` onclick="cycleStatus('${h.id}','${k}')"`;
+      return `<td class="hcell-day"><div class="${cls.join(' ')}"${clickAttr} title="${d.getDate()}-kun"></div></td>`;
     }).join('');
     const isFirst = rowIdx === 0;
     const isLast = rowIdx === sortedHabits.length - 1;
     return `
       <tr>
-        <td class="hcell-name"><div class="hname" data-id="${h.id}" onblur="renameHabit('${h.id}', this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}">${escapeHtml(h.name)}</div></td>
+        <td class="hcell-name">
+          <div class="hname-row">
+            <div class="reorder-btns">
+              <button class="icon-btn mini ${isFirst ? 'is-disabled' : ''}" title="Yuqoriga surish" onclick="moveHabit('${h.id}', -1)">${upIcon()}</button>
+              <button class="icon-btn mini ${isLast ? 'is-disabled' : ''}" title="Pastga surish" onclick="moveHabit('${h.id}', 1)">${downIcon()}</button>
+            </div>
+            <div class="hname" data-id="${h.id}" onblur="renameHabit('${h.id}', this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}">${escapeHtml(h.name)}</div>
+          </div>
+        </td>
         ${dayCells}
         <td class="hcell-meta">
           <div class="hcell-meta-inner">
             <div class="streak-badge">🔥 ${streak}</div>
             <div class="habit-actions">
-              <button class="icon-btn ${isFirst ? 'is-disabled' : ''}" title="Yuqoriga surish" onclick="moveHabit('${h.id}', -1)">${upIcon()}</button>
-              <button class="icon-btn ${isLast ? 'is-disabled' : ''}" title="Pastga surish" onclick="moveHabit('${h.id}', 1)">${downIcon()}</button>
               <button class="icon-btn" title="Nomini tahrirlash" onclick="editHabitName('${h.id}')">${editIcon()}</button>
               <button class="icon-btn danger" title="O'chirish" onclick="deleteHabit('${h.id}')">${trashIcon()}</button>
             </div>
@@ -429,6 +442,14 @@ function renderHabits(){
   tableEl.innerHTML = `
     <thead><tr><th class="hcell-name-head"></th>${headCells}<th></th></tr></thead>
     <tbody>${bodyRows}</tbody>`;
+
+  requestAnimationFrame(() => {
+    const marker = document.getElementById('today-col-marker');
+    if(marker && scrollEl){
+      const nameColWidth = tableEl.querySelector('td.hcell-name, th.hcell-name-head')?.offsetWidth || 0;
+      scrollEl.scrollLeft = Math.max(0, marker.offsetLeft - nameColWidth - 8);
+    }
+  });
 }
 
 // =====================================================
