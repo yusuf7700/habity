@@ -3,7 +3,29 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HabitY — kunlik odatlaringiz</title>
+<title>HabitY — kunlik odatlar</title>
+<meta name="description" content="HabitY — odatlaringizni kuzating, kayfiyat va uyquni belgilang, kundalik yuriting va maqsadlar qo'ying. Oddiy, chiroyli va bepul odat tracker.">
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#3F6B54">
+<link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
+<link rel="apple-touch-icon" href="img/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="HabitY">
+
+<!-- Open Graph / ijtimoiy tarmoq preview -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="HabitY — kunlik odatlar">
+<meta property="og:description" content="Odatlaringizni kuzating, kayfiyat va uyquni belgilang, kundalik yuriting va maqsadlar qo'ying.">
+<meta property="og:image" content="https://habityy.vercel.app/img/icon-512.png">
+<meta property="og:url" content="https://habityy.vercel.app">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="HabitY — kunlik odatlar">
+<meta name="twitter:description" content="Odatlaringizni kuzating, kayfiyat va uyquni belgilang, kundalik yuriting va maqsadlar qo'ying.">
+<meta name="twitter:image" content="https://habityy.vercel.app/img/icon-512.png">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
@@ -217,8 +239,13 @@
 
       <div class="card profile-head">
         <div class="avatar" id="profile-avatar">Y</div>
-        <div>
-          <div class="pname" id="profile-name">Yusuf</div>
+        <div style="flex:1;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div class="pname" id="profile-name" contenteditable="false" onblur="saveProfileName(this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}">Yusuf</div>
+            <button class="icon-btn" title="Ismni tahrirlash" onclick="editProfileName()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            </button>
+          </div>
           <div class="pemail" id="profile-email">yusuf@habity.uz</div>
           <div class="pjoined" id="profile-joined">Iyul 2026 dan beri a'zo</div>
         </div>
@@ -241,6 +268,14 @@
         </div>
       </div>
 
+      <div class="card settings-section" id="link-account-section" style="display:none;">
+        <h3>Hisobni bog'lash</h3>
+        <div class="setting-row">
+          <div><div class="stitle">Google bilan bog'lash</div><div class="sdesc">Hozir mehmon sifatida kirgansiz — ma'lumotlaringizni yo'qotmasdan Google hisobingizga bog'lab qo'ying</div></div>
+          <button class="btn btn-primary" onclick="linkGoogleAccount()">Bog'lash</button>
+        </div>
+      </div>
+
       <div class="card settings-section">
         <h3>Profil ma'lumotlari</h3>
         <div class="field"><label>Ism</label><input type="text" id="settings-name-input" readonly></div>
@@ -252,6 +287,14 @@
         <div class="setting-row">
           <div><div class="stitle">Tungi rejim</div><div class="sdesc">Ko'zga yumshoqroq, qorong'i mavzu</div></div>
           <button class="toggle" id="dark-toggle" onclick="toggleDarkMode()"></button>
+        </div>
+      </div>
+
+      <div class="card settings-section">
+        <h3>Ilova</h3>
+        <div class="setting-row">
+          <div><div class="stitle">Telefon/kompyuterga o'rnatish</div><div class="sdesc">HabitY'ni ilova sifatida o'rnating — tezroq ochiladi, bosh ekranda alohida ikonka bo'ladi</div></div>
+          <button class="btn btn-primary" id="install-app-btn" onclick="installApp()">O'rnatish</button>
         </div>
       </div>
 
@@ -268,6 +311,31 @@
         <div class="setting-row">
           <div><div class="stitle">Haftalik hisobot</div><div class="sdesc">Har yakshanba progress xulosasi yuboriladi</div></div>
           <button class="toggle" onclick="this.classList.toggle('on')"></button>
+        </div>
+      </div>
+
+      <div class="card settings-section">
+        <h3>Bizni kuzatib boring</h3>
+        <div class="setting-row">
+          <div><div class="stitle">Telegram</div><div class="sdesc">Dizayn va dasturlash ishlarim shu yerda</div></div>
+          <a class="btn btn-ghost" href="https://t.me/yuuvsuf" target="_blank" rel="noopener">@yuuvsuf</a>
+        </div>
+        <div class="setting-row">
+          <div><div class="stitle">Instagram</div><div class="sdesc">Loyihalar va jarayonlar</div></div>
+          <a class="btn btn-ghost" href="https://instagram.com/yunusovvyusuf" target="_blank" rel="noopener">@yunusovvyusuf</a>
+        </div>
+      </div>
+
+      <div class="card settings-section">
+        <h3>Loyihani qo'llab-quvvatlash</h3>
+        <div class="setting-row">
+          <div>
+            <div class="stitle">Uzcard orqali donat</div>
+            <div class="sdesc">Yunusov Yusuf</div>
+          </div>
+          <button class="btn btn-ghost" onclick="copyCardNumber()">
+            <span class="mono" id="card-number-text">5614 6847 0539 1512</span>
+          </button>
         </div>
       </div>
 
