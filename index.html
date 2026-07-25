@@ -28,7 +28,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=4">
+<link rel="stylesheet" href="css/style.css?v=5">
 </head>
 <body>
 
@@ -125,8 +125,12 @@
           <span><span class="legend-dot red"></span>Bajarilmadi</span>
           <span class="grid-month mono" id="grid-month-label"></span>
         </div>
-        <div class="grid-scroll" id="habit-grid-scroll">
-          <div class="habit-grid-grid" id="habit-grid-grid"></div>
+        <div class="habit-grid-wrap">
+          <div class="hg-names-col" id="hg-names-col"></div>
+          <div class="grid-scroll" id="habit-grid-scroll">
+            <div class="hg-days-grid" id="habit-grid-grid"></div>
+          </div>
+          <div class="hg-meta-col" id="hg-meta-col"></div>
         </div>
         <div class="empty-state" id="habit-grid-empty" style="display:none;">Hali odat qo'shilmagan.<br>Pastdagi maydondan birinchi odatingizni qo'shing.</div>
         <div class="add-habit-row">
@@ -405,6 +409,6 @@
   </nav>
 </div>
 
-<script type="module" src="js/app.js?v=4"></script>
+<script type="module" src="js/app.js?v=5"></script>
 </body>
 </html>
