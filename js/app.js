@@ -7,7 +7,8 @@ import {
   linkWithPopup, onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import {
-  getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc,
+  initializeFirestore, persistentLocalCache, persistentSingleTabManager,
+  collection, doc, addDoc, setDoc, updateDoc, deleteDoc,
   onSnapshot, deleteField, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
@@ -23,7 +24,9 @@ const firebaseConfig = {
 
 const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
-const db = getFirestore(fbApp);
+const db = initializeFirestore(fbApp, {
+  localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() })
+});
 const googleProvider = new GoogleAuthProvider();
 
 let currentUser = null;
@@ -191,6 +194,9 @@ function copyCardNumber(){
 }
 
 onAuthStateChanged(auth, user => {
+  const splash = document.getElementById('splash-screen');
+  if(splash) splash.style.display = 'none';
+
   if(user){
     currentUser = user;
     document.getElementById('auth-screen').style.display = 'none';
@@ -457,14 +463,15 @@ function renderHabits(){
 
   gridEl.innerHTML = cellsHtml;
 
-  requestAnimationFrame(() => {
+  const scrollToToday = () => {
     const marker = document.getElementById('today-col-marker');
-    const nameCell = gridEl.querySelector('.hg-name, .hg-name-head');
+    const nameCell = gridEl.querySelector('.hg-name') || gridEl.querySelector('.hg-name-head');
     if(marker && scrollEl){
       const nameColWidth = nameCell ? nameCell.offsetWidth : 0;
       scrollEl.scrollLeft = Math.max(0, marker.offsetLeft - nameColWidth - 8);
     }
-  });
+  };
+  requestAnimationFrame(() => requestAnimationFrame(scrollToToday));
 }
 
 // =====================================================
