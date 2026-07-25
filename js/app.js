@@ -377,11 +377,11 @@ function editHabitName(id){
 }
 
 function renderHabits(){
-  const tableEl = document.getElementById('habit-grid-table');
+  const gridEl = document.getElementById('habit-grid-grid');
   const scrollEl = document.getElementById('habit-grid-scroll');
   const monthLabelEl = document.getElementById('grid-month-label');
   const emptyEl = document.getElementById('habit-grid-empty');
-  if(!tableEl) return;
+  if(!gridEl) return;
 
   const today = todayISO();
   const monthDates = currentMonthDates();
@@ -390,24 +390,50 @@ function renderHabits(){
   }
 
   if(state.habits.length === 0){
-    tableEl.innerHTML = '';
-    tableEl.style.display = 'none';
+    gridEl.innerHTML = '';
+    gridEl.style.display = 'none';
     if(emptyEl) emptyEl.style.display = 'block';
     return;
   }
-  tableEl.style.display = '';
+  gridEl.style.display = '';
   if(emptyEl) emptyEl.style.display = 'none';
 
   const sortedHabits = getSortedHabits();
+  const dayCount = monthDates.length;
+  const totalCols = dayCount + 2; // name column + day columns + meta column
 
-  const headCells = monthDates.map(d => {
+  gridEl.style.gridTemplateColumns = `auto repeat(${dayCount}, 32px) auto`;
+  gridEl.style.gridTemplateRows = `28px repeat(${sortedHabits.length}, 52px)`;
+
+  let cellsHtml = '';
+
+  // Header row (row 1)
+  cellsHtml += `<div class="hg-cell hg-name-head" style="grid-row:1; grid-column:1;"></div>`;
+  monthDates.forEach((d, colIdx) => {
     const isToday = isoDate(d) === today;
-    return `<th class="${isToday ? 'today-col' : ''}" ${isToday ? 'id="today-col-marker"' : ''}>${d.getDate()}</th>`;
-  }).join('');
+    cellsHtml += `<div class="hg-cell hg-head ${isToday ? 'today-col' : ''}" ${isToday ? 'id="today-col-marker"' : ''} style="grid-row:1; grid-column:${colIdx + 2};">${d.getDate()}</div>`;
+  });
+  cellsHtml += `<div class="hg-cell hg-head" style="grid-row:1; grid-column:${totalCols};"></div>`;
 
-  const bodyRows = sortedHabits.map((h, rowIdx) => {
+  // Body rows
+  sortedHabits.forEach((h, rowIdx) => {
+    const gridRow = rowIdx + 2;
     const streak = computeCurrentStreak(h);
-    const dayCells = monthDates.map(d => {
+    const isFirst = rowIdx === 0;
+    const isLast = rowIdx === sortedHabits.length - 1;
+
+    cellsHtml += `
+      <div class="hg-cell hg-name" style="grid-row:${gridRow}; grid-column:1;">
+        <div class="hname-row">
+          <div class="reorder-btns">
+            <button class="icon-btn ${isFirst ? 'is-disabled' : ''}" title="Yuqoriga surish" onclick="moveHabit('${h.id}', -1)">${upIcon()}</button>
+            <button class="icon-btn ${isLast ? 'is-disabled' : ''}" title="Pastga surish" onclick="moveHabit('${h.id}', 1)">${downIcon()}</button>
+          </div>
+          <div class="hname" data-id="${h.id}" onblur="renameHabit('${h.id}', this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}">${escapeHtml(h.name)}</div>
+        </div>
+      </div>`;
+
+    monthDates.forEach((d, colIdx) => {
       const k = isoDate(d);
       const isFuture = k > today;
       const s = h.logs[k];
@@ -416,42 +442,26 @@ function renderHabits(){
       if(k === today) cls.push('is-today');
       if(isFuture) cls.push('future');
       const clickAttr = isFuture ? '' : ` onclick="cycleStatus('${h.id}','${k}')"`;
-      return `<td class="hcell-day"><div class="${cls.join(' ')}"${clickAttr} title="${d.getDate()}-kun"></div></td>`;
-    }).join('');
-    const isFirst = rowIdx === 0;
-    const isLast = rowIdx === sortedHabits.length - 1;
-    return `
-      <tr>
-        <td class="hcell-name">
-          <div class="hname-row">
-            <div class="reorder-btns">
-              <button class="icon-btn mini ${isFirst ? 'is-disabled' : ''}" title="Yuqoriga surish" onclick="moveHabit('${h.id}', -1)">${upIcon()}</button>
-              <button class="icon-btn mini ${isLast ? 'is-disabled' : ''}" title="Pastga surish" onclick="moveHabit('${h.id}', 1)">${downIcon()}</button>
-            </div>
-            <div class="hname" data-id="${h.id}" onblur="renameHabit('${h.id}', this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}">${escapeHtml(h.name)}</div>
-          </div>
-        </td>
-        ${dayCells}
-        <td class="hcell-meta">
-          <div class="hcell-meta-inner">
-            <div class="streak-badge">🔥 ${streak}</div>
-            <div class="habit-actions">
-              <button class="icon-btn" title="Nomini tahrirlash" onclick="editHabitName('${h.id}')">${editIcon()}</button>
-              <button class="icon-btn danger" title="O'chirish" onclick="deleteHabit('${h.id}')">${trashIcon()}</button>
-            </div>
-          </div>
-        </td>
-      </tr>`;
-  }).join('');
+      cellsHtml += `<div class="hg-cell hg-day" style="grid-row:${gridRow}; grid-column:${colIdx + 2};"><div class="${cls.join(' ')}"${clickAttr} title="${d.getDate()}-kun"></div></div>`;
+    });
 
-  tableEl.innerHTML = `
-    <thead><tr><th class="hcell-name-head"></th>${headCells}<th></th></tr></thead>
-    <tbody>${bodyRows}</tbody>`;
+    cellsHtml += `
+      <div class="hg-cell hg-meta" style="grid-row:${gridRow}; grid-column:${totalCols};">
+        <div class="streak-badge">🔥 ${streak}</div>
+        <div class="habit-actions">
+          <button class="icon-btn" title="Nomini tahrirlash" onclick="editHabitName('${h.id}')">${editIcon()}</button>
+          <button class="icon-btn danger" title="O'chirish" onclick="deleteHabit('${h.id}')">${trashIcon()}</button>
+        </div>
+      </div>`;
+  });
+
+  gridEl.innerHTML = cellsHtml;
 
   requestAnimationFrame(() => {
     const marker = document.getElementById('today-col-marker');
+    const nameCell = gridEl.querySelector('.hg-name, .hg-name-head');
     if(marker && scrollEl){
-      const nameColWidth = tableEl.querySelector('td.hcell-name, th.hcell-name-head')?.offsetWidth || 0;
+      const nameColWidth = nameCell ? nameCell.offsetWidth : 0;
       scrollEl.scrollLeft = Math.max(0, marker.offsetLeft - nameColWidth - 8);
     }
   });
