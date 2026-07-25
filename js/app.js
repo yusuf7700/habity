@@ -383,11 +383,14 @@ function editHabitName(id){
 }
 
 function renderHabits(){
+  const namesColEl = document.getElementById('hg-names-col');
+  const metaColEl = document.getElementById('hg-meta-col');
   const gridEl = document.getElementById('habit-grid-grid');
   const scrollEl = document.getElementById('habit-grid-scroll');
   const monthLabelEl = document.getElementById('grid-month-label');
   const emptyEl = document.getElementById('habit-grid-empty');
-  if(!gridEl) return;
+  const wrapEl = document.querySelector('.habit-grid-wrap');
+  if(!gridEl || !namesColEl || !metaColEl) return;
 
   const today = todayISO();
   const monthDates = currentMonthDates();
@@ -397,39 +400,28 @@ function renderHabits(){
 
   if(state.habits.length === 0){
     gridEl.innerHTML = '';
-    gridEl.style.display = 'none';
+    namesColEl.innerHTML = '';
+    metaColEl.innerHTML = '';
+    if(wrapEl) wrapEl.style.display = 'none';
     if(emptyEl) emptyEl.style.display = 'block';
     return;
   }
-  gridEl.style.display = '';
+  if(wrapEl) wrapEl.style.display = '';
   if(emptyEl) emptyEl.style.display = 'none';
 
   const sortedHabits = getSortedHabits();
   const dayCount = monthDates.length;
-  const totalCols = dayCount + 2; // name column + day columns + meta column
 
-  gridEl.style.gridTemplateColumns = `auto repeat(${dayCount}, 32px) auto`;
-  gridEl.style.gridTemplateRows = `28px repeat(${sortedHabits.length}, 52px)`;
+  gridEl.style.gridTemplateColumns = `repeat(${dayCount}, 32px)`;
+  gridEl.style.gridTemplateRows = `32px repeat(${sortedHabits.length}, 52px)`;
 
-  let cellsHtml = '';
-
-  // Header row (row 1)
-  cellsHtml += `<div class="hg-cell hg-name-head" style="grid-row:1; grid-column:1;"></div>`;
-  monthDates.forEach((d, colIdx) => {
-    const isToday = isoDate(d) === today;
-    cellsHtml += `<div class="hg-cell hg-head ${isToday ? 'today-col' : ''}" ${isToday ? 'id="today-col-marker"' : ''} style="grid-row:1; grid-column:${colIdx + 2};">${d.getDate()}</div>`;
-  });
-  cellsHtml += `<div class="hg-cell hg-head" style="grid-row:1; grid-column:${totalCols};"></div>`;
-
-  // Body rows
+  // ---------- Names column (fixed, not scrolled) ----------
+  let namesHtml = `<div class="hg-row-spacer"></div>`;
   sortedHabits.forEach((h, rowIdx) => {
-    const gridRow = rowIdx + 2;
-    const streak = computeCurrentStreak(h);
     const isFirst = rowIdx === 0;
     const isLast = rowIdx === sortedHabits.length - 1;
-
-    cellsHtml += `
-      <div class="hg-cell hg-name" style="grid-row:${gridRow}; grid-column:1;">
+    namesHtml += `
+      <div class="hg-name-row">
         <div class="hname-row">
           <div class="reorder-btns">
             <button class="icon-btn ${isFirst ? 'is-disabled' : ''}" title="Yuqoriga surish" onclick="moveHabit('${h.id}', -1)">${upIcon()}</button>
@@ -438,7 +430,17 @@ function renderHabits(){
           <div class="hname" data-id="${h.id}" onblur="renameHabit('${h.id}', this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}">${escapeHtml(h.name)}</div>
         </div>
       </div>`;
+  });
+  namesColEl.innerHTML = namesHtml;
 
+  // ---------- Scrollable day grid ----------
+  let cellsHtml = '';
+  monthDates.forEach((d, colIdx) => {
+    const isToday = isoDate(d) === today;
+    cellsHtml += `<div class="hg-cell hg-head ${isToday ? 'today-col' : ''}" ${isToday ? 'id="today-col-marker"' : ''} style="grid-row:1; grid-column:${colIdx + 1};">${d.getDate()}</div>`;
+  });
+  sortedHabits.forEach((h, rowIdx) => {
+    const gridRow = rowIdx + 2;
     monthDates.forEach((d, colIdx) => {
       const k = isoDate(d);
       const isFuture = k > today;
@@ -448,11 +450,17 @@ function renderHabits(){
       if(k === today) cls.push('is-today');
       if(isFuture) cls.push('future');
       const clickAttr = isFuture ? '' : ` onclick="cycleStatus('${h.id}','${k}')"`;
-      cellsHtml += `<div class="hg-cell hg-day" style="grid-row:${gridRow}; grid-column:${colIdx + 2};"><div class="${cls.join(' ')}"${clickAttr} title="${d.getDate()}-kun"></div></div>`;
+      cellsHtml += `<div class="hg-cell hg-day" style="grid-row:${gridRow}; grid-column:${colIdx + 1};"><div class="${cls.join(' ')}"${clickAttr} title="${d.getDate()}-kun"></div></div>`;
     });
+  });
+  gridEl.innerHTML = cellsHtml;
 
-    cellsHtml += `
-      <div class="hg-cell hg-meta" style="grid-row:${gridRow}; grid-column:${totalCols};">
+  // ---------- Meta column (fixed, not scrolled) ----------
+  let metaHtml = `<div class="hg-row-spacer"></div>`;
+  sortedHabits.forEach(h => {
+    const streak = computeCurrentStreak(h);
+    metaHtml += `
+      <div class="hg-meta-row">
         <div class="streak-badge">🔥 ${streak}</div>
         <div class="habit-actions">
           <button class="icon-btn" title="Nomini tahrirlash" onclick="editHabitName('${h.id}')">${editIcon()}</button>
@@ -460,15 +468,12 @@ function renderHabits(){
         </div>
       </div>`;
   });
-
-  gridEl.innerHTML = cellsHtml;
+  metaColEl.innerHTML = metaHtml;
 
   const scrollToToday = () => {
     const marker = document.getElementById('today-col-marker');
-    const nameCell = gridEl.querySelector('.hg-name') || gridEl.querySelector('.hg-name-head');
     if(marker && scrollEl){
-      const nameColWidth = nameCell ? nameCell.offsetWidth : 0;
-      scrollEl.scrollLeft = Math.max(0, marker.offsetLeft - nameColWidth - 8);
+      scrollEl.scrollLeft = Math.max(0, marker.offsetLeft - 8);
     }
   };
   requestAnimationFrame(() => requestAnimationFrame(scrollToToday));
