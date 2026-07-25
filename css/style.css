@@ -281,27 +281,29 @@
   .grid-month{ margin-left:auto; color: var(--ink-faint); font-size:12px; }
 
   .grid-scroll{ overflow-x: auto; padding-bottom: 4px; }
-  table.habit-grid{ border-collapse: collapse; width:100%; }
-  table.habit-grid th, table.habit-grid td{ padding: 0; }
-  table.habit-grid thead th{
-    font-size: 10.5px; font-weight:600; color: var(--ink-faint); text-align:center;
-    padding-bottom: 8px; min-width: 26px;
+
+  .habit-grid-grid{ display: grid; align-items: stretch; }
+  .hg-cell{ display:flex; align-items:center; box-sizing:border-box; }
+  .hg-head{
+    font-size: 10.5px; font-weight:600; color: var(--ink-faint); justify-content:center;
+    padding-bottom: 10px; height: 24px;
   }
-  table.habit-grid thead th.today-col{ color: var(--accent-dark); }
-  table.habit-grid th.hcell-name-head, table.habit-grid td.hcell-name{
-    text-align:left; position: sticky; left:0; background: var(--surface);
-    padding-right: 14px; min-width: 150px; max-width: 190px;
+  .icon-btn.is-disabled{ opacity: .25; pointer-events: none; }
+  .hg-head.today-col{ color: var(--accent-dark); font-weight:700; }
+  .hg-name, .hg-name-head{
+    position: sticky; left:0; background: var(--surface); z-index: 2;
+    padding-right: 14px; min-width: 170px; max-width: 200px;
   }
-  table.habit-grid td.hcell-name{ font-size:13.5px; font-weight:600; padding-top:10px; padding-bottom:10px; }
-  table.habit-grid td.hcell-name .hname[contenteditable="true"]{
+  .hg-name-head{ z-index: 3; }
+  .hg-name{ font-size:13.5px; font-weight:600; height: 52px; border-top: 1px solid var(--border); }
+  .hg-name .hname[contenteditable="true"]{
     outline:none; border-bottom: 1px dashed var(--accent);
   }
-  table.habit-grid tbody tr{ border-top: 1px solid var(--border); }
-  table.habit-grid td.hcell-day{ text-align:center; vertical-align:middle; }
+  .hg-day{ justify-content:center; height:52px; border-top: 1px solid var(--border); }
   .grid-dot{
-    width: 20px; height:20px; border-radius:50%;
+    width: 20px; height:20px; border-radius:50%; flex-shrink:0;
     background: var(--bg); border: 1.5px solid var(--border);
-    margin: 4px auto; cursor:pointer; transition: transform .1s ease;
+    cursor:pointer; transition: transform .1s ease;
   }
   .grid-dot:hover{ transform: scale(1.12); }
   .grid-dot.future{ cursor: default; opacity:.35; }
@@ -310,8 +312,10 @@
   .grid-dot.state-yellow{ background: #E4B23C; border-color: #E4B23C; }
   .grid-dot.state-red{ background: var(--danger); border-color: var(--danger); }
   .grid-dot.is-today{ box-shadow: 0 0 0 2px var(--highlight-soft); }
-  td.hcell-meta{ padding-left: 14px; white-space: nowrap; }
-  .hcell-meta-inner{ display:flex; align-items:center; gap:6px; }
+  .hg-meta{
+    padding-left: 14px; white-space: nowrap; justify-content:flex-end; gap:6px;
+    height:52px; border-top: 1px solid var(--border);
+  }
 
   .streak-badge{
     display:flex; align-items:center; gap:4px;
@@ -322,12 +326,16 @@
     white-space: nowrap;
   }
   .habit-actions{
-    display:flex; gap:2px; opacity:0; transition: opacity .15s ease; flex-shrink:0;
+    display:flex; gap:2px; flex-shrink:0;
   }
-  table.habit-grid tbody tr:hover .habit-actions{ opacity:1; }
+  .hname-row{ display:flex; align-items:center; gap:6px; width:100%; }
+  .reorder-btns{ display:flex; flex-direction:row; gap:0px; flex-shrink:0; }
+  .reorder-btns .icon-btn{ width:20px; height:20px; border-radius:5px; }
+  .reorder-btns .icon-btn svg{ width:13px; height:13px; }
   .icon-btn{
     width:24px; height:24px; border-radius:7px; border:none; background:transparent;
     display:flex; align-items:center; justify-content:center; color: var(--ink-faint);
+    flex-shrink:0;
   }
   .icon-btn:hover{ background: var(--bg); color: var(--ink); }
   .icon-btn.danger:hover{ color: var(--danger); }
@@ -396,6 +404,20 @@
   .heat-cell.l3{ background: var(--accent); }
 
   /* ---------- Kundalik ---------- */
+  .ai-analysis-card{ padding: 20px 22px; margin-bottom: 22px; }
+  .ai-analysis-head{ display:flex; justify-content:space-between; align-items:center; gap:16px; }
+  .ai-analysis-head h3{ font-size:15px; margin:0 0 4px; font-weight:600; }
+  .ai-analysis-sub{ font-size:12.5px; color: var(--ink-soft); margin:0; }
+  .ai-analysis-result{
+    margin-top:16px; padding:16px 18px; border-radius: var(--radius-sm);
+    background: var(--accent-soft); color: var(--accent-dark);
+    font-size:13.5px; line-height:1.6; white-space: pre-line;
+  }
+  @media (max-width:520px){
+    .ai-analysis-head{ flex-direction:column; align-items:flex-start; }
+    .ai-analysis-head button{ width:100%; }
+  }
+
   .journal-editor{ padding:22px; margin-bottom:22px; }
   .journal-editor .sliders-row{ display:flex; gap: 30px; margin-bottom:20px; }
   .journal-editor .sliders-row .slider-block{ flex:1; margin-bottom:0; }
@@ -444,6 +466,9 @@
   .profile-head{ display:flex; align-items:center; gap:18px; padding: 26px; margin-bottom:20px; }
   .profile-head .avatar{ width:64px; height:64px; font-size:22px; }
   .profile-head .pname{ font-size:20px; font-weight:600; }
+  .profile-head .pname[contenteditable="true"]{
+    outline:none; border-bottom: 1px dashed var(--accent); display:inline-block;
+  }
   .profile-head .pemail{ font-size:13.5px; color: var(--ink-soft); }
   .profile-head .pjoined{ font-size:12px; color: var(--ink-faint); margin-top:4px; }
   .profile-stats{ display:grid; grid-template-columns: repeat(4,1fr); gap:14px; }
@@ -473,6 +498,20 @@
   .toggle.on::after{ left: 19px; }
   .danger-zone{ border-color: #E7D2CC; }
   .danger-zone h3{ color: var(--danger); }
+
+  .donate-desc{ font-size:13.5px; color: var(--ink-soft); margin: -4px 0 16px; line-height:1.5; }
+  .donate-card-btn{
+    width:100%; display:flex; flex-direction:column; align-items:center; gap:6px;
+    padding: 20px 12px; border-radius: var(--radius-md); border: 1.5px dashed var(--border);
+    background: var(--bg); cursor:pointer; transition: border-color .15s ease, transform .1s ease;
+  }
+  .donate-card-btn:hover{ border-color: var(--accent); }
+  .donate-card-btn:active{ transform: scale(0.99); }
+  .donate-card-number{
+    font-size: clamp(15px, 4.6vw, 19px);
+    font-weight:600; letter-spacing: 0.5px; white-space: nowrap; color: var(--ink);
+  }
+  .donate-card-name{ font-size:12.5px; color: var(--ink-soft); letter-spacing:0.03em; }
 
   /* ---------- Mobile bottom nav ---------- */
   .mobile-nav{ display:none; }
@@ -507,7 +546,7 @@
   }
 
   @media (max-width: 520px){
-    table.habit-grid td.hcell-name{ min-width: 120px; max-width:130px; font-size:12.5px; }
+    .hg-name{ min-width: 130px; max-width:140px; font-size:12.5px; }
     .grid-dot{ width:18px; height:18px; }
   }
 
