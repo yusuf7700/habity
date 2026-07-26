@@ -32,6 +32,7 @@ const googleProvider = new GoogleAuthProvider();
 let currentUser = null;
 let unsubscribers = [];
 let showAddGoalForm = false;
+let weekOffset = 0;
 
 function isoDate(d){
   const y = d.getFullYear();
@@ -278,14 +279,30 @@ function lastNDates(n){
   }
   return arr;
 }
-function daysInMonth(year, month){ return new Date(year, month + 1, 0).getDate(); }
-function currentMonthDates(){
+function getWeekDates(offset){
   const now = new Date();
-  const y = now.getFullYear(), m = now.getMonth();
-  const total = daysInMonth(y, m);
+  const day = now.getDay(); // 0=Yak, 1=Dush, ... 6=Shan
+  const diffToMonday = (day === 0 ? -6 : 1 - day);
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMonday + offset * 7);
   const arr = [];
-  for(let day = 1; day <= total; day++) arr.push(new Date(y, m, day));
+  for(let i = 0; i < 7; i++){
+    const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+    arr.push(d);
+  }
   return arr;
+}
+function changeWeek(delta, jumpToCurrent){
+  weekOffset = jumpToCurrent ? 0 : weekOffset + delta;
+  renderHabits();
+}
+function formatWeekLabel(dates){
+  const first = dates[0], last = dates[6];
+  const monthsUz = ['yanvar','fevral','mart','aprel','may','iyun','iyul','avgust','sentabr','oktabr','noyabr','dekabr'];
+  const m1 = monthsUz[first.getMonth()], m2 = monthsUz[last.getMonth()];
+  if(first.getMonth() === last.getMonth()){
+    return `${first.getDate()}–${last.getDate()} ${m1}`;
+  }
+  return `${first.getDate()} ${m1} – ${last.getDate()} ${m2}`;
 }
 
 // =====================================================
@@ -383,65 +400,46 @@ function editHabitName(id){
 }
 
 function renderHabits(){
-  const namesColEl = document.getElementById('hg-names-col');
-  const metaColEl = document.getElementById('hg-meta-col');
-  const gridEl = document.getElementById('habit-grid-grid');
-  const scrollEl = document.getElementById('habit-grid-scroll');
-  const monthLabelEl = document.getElementById('grid-month-label');
+  const listEl = document.getElementById('habit-list');
   const emptyEl = document.getElementById('habit-grid-empty');
-  const wrapEl = document.querySelector('.habit-grid-wrap');
-  if(!gridEl || !namesColEl || !metaColEl) return;
+  const weekLabelEl = document.getElementById('week-label');
+  const todayBtnEl = document.getElementById('week-today-btn');
+  if(!listEl) return;
 
   const today = todayISO();
-  const monthDates = currentMonthDates();
-  if(monthLabelEl){
-    monthLabelEl.textContent = new Date().toLocaleDateString('uz-UZ', { month: 'long', year: 'numeric' });
-  }
+  const weekDates = getWeekDates(weekOffset);
+  const dayLabels = ['Du','Se','Ch','Pa','Ju','Sh','Ya'];
+
+  if(weekLabelEl) weekLabelEl.textContent = formatWeekLabel(weekDates);
+  if(todayBtnEl) todayBtnEl.style.display = weekOffset === 0 ? 'none' : 'inline-flex';
 
   if(state.habits.length === 0){
-    gridEl.innerHTML = '';
-    namesColEl.innerHTML = '';
-    metaColEl.innerHTML = '';
-    if(wrapEl) wrapEl.style.display = 'none';
+    listEl.innerHTML = '';
     if(emptyEl) emptyEl.style.display = 'block';
     return;
   }
-  if(wrapEl) wrapEl.style.display = '';
   if(emptyEl) emptyEl.style.display = 'none';
 
   const sortedHabits = getSortedHabits();
-  const dayCount = monthDates.length;
 
-  gridEl.style.gridTemplateColumns = `repeat(${dayCount}, 32px)`;
-  gridEl.style.gridTemplateRows = `32px repeat(${sortedHabits.length}, 52px)`;
+  const headerDays = weekDates.map((d, i) => {
+    const isToday = isoDate(d) === today;
+    return `<div class="day-cell"><div class="day-label ${isToday ? 'today-col' : ''}">${dayLabels[i]}<br>${d.getDate()}</div></div>`;
+  }).join('');
 
-  // ---------- Names column (fixed, not scrolled) ----------
-  let namesHtml = `<div class="hg-row-spacer"></div>`;
+  let html = `
+    <div class="habit-row header-row">
+      <div class="habit-row-name"></div>
+      <div class="habit-row-days">${headerDays}</div>
+      <div class="habit-row-meta"></div>
+    </div>`;
+
   sortedHabits.forEach((h, rowIdx) => {
+    const streak = computeCurrentStreak(h);
     const isFirst = rowIdx === 0;
     const isLast = rowIdx === sortedHabits.length - 1;
-    namesHtml += `
-      <div class="hg-name-row">
-        <div class="hname-row">
-          <div class="reorder-btns">
-            <button class="icon-btn ${isFirst ? 'is-disabled' : ''}" title="Yuqoriga surish" onclick="moveHabit('${h.id}', -1)">${upIcon()}</button>
-            <button class="icon-btn ${isLast ? 'is-disabled' : ''}" title="Pastga surish" onclick="moveHabit('${h.id}', 1)">${downIcon()}</button>
-          </div>
-          <div class="hname" data-id="${h.id}" onblur="renameHabit('${h.id}', this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}">${escapeHtml(h.name)}</div>
-        </div>
-      </div>`;
-  });
-  namesColEl.innerHTML = namesHtml;
 
-  // ---------- Scrollable day grid ----------
-  let cellsHtml = '';
-  monthDates.forEach((d, colIdx) => {
-    const isToday = isoDate(d) === today;
-    cellsHtml += `<div class="hg-cell hg-head ${isToday ? 'today-col' : ''}" ${isToday ? 'id="today-col-marker"' : ''} style="grid-row:1; grid-column:${colIdx + 1};">${d.getDate()}</div>`;
-  });
-  sortedHabits.forEach((h, rowIdx) => {
-    const gridRow = rowIdx + 2;
-    monthDates.forEach((d, colIdx) => {
+    const dayDots = weekDates.map(d => {
       const k = isoDate(d);
       const isFuture = k > today;
       const s = h.logs[k];
@@ -450,33 +448,30 @@ function renderHabits(){
       if(k === today) cls.push('is-today');
       if(isFuture) cls.push('future');
       const clickAttr = isFuture ? '' : ` onclick="cycleStatus('${h.id}','${k}')"`;
-      cellsHtml += `<div class="hg-cell hg-day" style="grid-row:${gridRow}; grid-column:${colIdx + 1};"><div class="${cls.join(' ')}"${clickAttr} title="${d.getDate()}-kun"></div></div>`;
-    });
-  });
-  gridEl.innerHTML = cellsHtml;
+      return `<div class="day-cell"><div class="${cls.join(' ')}"${clickAttr} title="${d.getDate()}-kun"></div></div>`;
+    }).join('');
 
-  // ---------- Meta column (fixed, not scrolled) ----------
-  let metaHtml = `<div class="hg-row-spacer"></div>`;
-  sortedHabits.forEach(h => {
-    const streak = computeCurrentStreak(h);
-    metaHtml += `
-      <div class="hg-meta-row">
-        <div class="streak-badge">🔥 ${streak}</div>
-        <div class="habit-actions">
-          <button class="icon-btn" title="Nomini tahrirlash" onclick="editHabitName('${h.id}')">${editIcon()}</button>
-          <button class="icon-btn danger" title="O'chirish" onclick="deleteHabit('${h.id}')">${trashIcon()}</button>
+    html += `
+      <div class="habit-row">
+        <div class="habit-row-name">
+          <div class="reorder-btns">
+            <button class="icon-btn ${isFirst ? 'is-disabled' : ''}" title="Yuqoriga surish" onclick="moveHabit('${h.id}', -1)">${upIcon()}</button>
+            <button class="icon-btn ${isLast ? 'is-disabled' : ''}" title="Pastga surish" onclick="moveHabit('${h.id}', 1)">${downIcon()}</button>
+          </div>
+          <div class="hname" data-id="${h.id}" onblur="renameHabit('${h.id}', this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}">${escapeHtml(h.name)}</div>
+        </div>
+        <div class="habit-row-days">${dayDots}</div>
+        <div class="habit-row-meta">
+          <div class="streak-badge">🔥 ${streak}</div>
+          <div class="habit-actions">
+            <button class="icon-btn" title="Nomini tahrirlash" onclick="editHabitName('${h.id}')">${editIcon()}</button>
+            <button class="icon-btn danger" title="O'chirish" onclick="deleteHabit('${h.id}')">${trashIcon()}</button>
+          </div>
         </div>
       </div>`;
   });
-  metaColEl.innerHTML = metaHtml;
 
-  const scrollToToday = () => {
-    const marker = document.getElementById('today-col-marker');
-    if(marker && scrollEl){
-      scrollEl.scrollLeft = Math.max(0, marker.offsetLeft - 8);
-    }
-  };
-  requestAnimationFrame(() => requestAnimationFrame(scrollToToday));
+  listEl.innerHTML = html;
 }
 
 // =====================================================
@@ -815,7 +810,7 @@ refreshDateHeaders();
 // (required because ES module scope doesn't leak to window automatically)
 Object.assign(window, {
   showView, continueWithName, signInWithGoogle, signOutUser, linkGoogleAccount, toggleDarkMode,
-  cycleStatus, addHabit, deleteHabit, renameHabit, editHabitName, moveHabit,
+  cycleStatus, addHabit, deleteHabit, renameHabit, editHabitName, moveHabit, changeWeek,
   addGoal, deleteGoal, updateGoalPercent, renameGoalField, toggleAddGoalForm, makeGoalEditable,
   deleteJournalEntry, editProfileName, saveProfileName, copyCardNumber, installApp, clearCache, analyzeJournal
 });
