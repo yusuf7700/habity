@@ -28,7 +28,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=5">
+<link rel="stylesheet" href="css/style.css?v=6">
 </head>
 <body>
 
@@ -123,15 +123,18 @@
           <span><span class="legend-dot green"></span>Bajarildi</span>
           <span><span class="legend-dot yellow"></span>Yarmigacha</span>
           <span><span class="legend-dot red"></span>Bajarilmadi</span>
-          <span class="grid-month mono" id="grid-month-label"></span>
         </div>
-        <div class="habit-grid-wrap">
-          <div class="hg-names-col" id="hg-names-col"></div>
-          <div class="grid-scroll" id="habit-grid-scroll">
-            <div class="hg-days-grid" id="habit-grid-grid"></div>
-          </div>
-          <div class="hg-meta-col" id="hg-meta-col"></div>
+        <div class="week-nav">
+          <button class="week-nav-btn" onclick="changeWeek(-1)" aria-label="Oldingi hafta">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <div class="week-label" id="week-label"></div>
+          <button class="week-nav-btn" onclick="changeWeek(1)" aria-label="Keyingi hafta">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+          <button class="btn btn-ghost week-today-btn" id="week-today-btn" onclick="changeWeek(0, true)" style="display:none;">Bugun</button>
         </div>
+        <div class="habit-list" id="habit-list"></div>
         <div class="empty-state" id="habit-grid-empty" style="display:none;">Hali odat qo'shilmagan.<br>Pastdagi maydondan birinchi odatingizni qo'shing.</div>
         <div class="add-habit-row">
           <input type="text" id="new-habit-input" placeholder="Yangi odat qo'shish, masalan: Kuniga 30 daqiqa yugurish" onkeydown="if(event.key==='Enter'){ addHabit(this.value); this.value=''; }">
@@ -409,6 +412,6 @@
   </nav>
 </div>
 
-<script type="module" src="js/app.js?v=5"></script>
+<script type="module" src="js/app.js?v=6"></script>
 </body>
 </html>
