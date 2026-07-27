@@ -310,7 +310,7 @@
   .week-label{ font-family:'IBM Plex Mono'; font-size:13px; font-weight:600; min-width:120px; text-align:center; }
   .week-today-btn{ padding:5px 12px; font-size:12px; }
 
-  .habit-list{ display:flex; flex-direction:column; }
+  .habit-list{ display:flex; flex-direction:column; overflow-x:auto; }
   .habit-row{
     display:flex;
     align-items:center;
@@ -319,9 +319,9 @@
     border-top: 1px solid var(--border);
   }
   .habit-row.header-row{ border-top:none; padding-top:0; padding-bottom:10px; }
-  .habit-row-name{ flex: 1 1 auto; display:flex; align-items:center; gap:6px; min-width:0; }
+  .habit-row-name{ flex: 1 1 0; display:flex; align-items:center; gap:4px; min-width: 48px; overflow:hidden; }
   .habit-row-name .hname{
-    font-size:13.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    font-size:13.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;
   }
   .habit-row-name .hname[contenteditable="true"]{
     outline:none; border-bottom: 1px dashed var(--accent); overflow:visible; white-space:normal;
