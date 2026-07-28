@@ -261,6 +261,53 @@ function upIcon(){
 function downIcon(){
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
 }
+function kebabIcon(){
+  return '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>';
+}
+
+// ---------- Mobile row menu (up/down/edit/delete collapsed into one button) ----------
+let activeMenuHabitId = null;
+function toggleRowMenu(habitId, btnEl){
+  const menu = document.getElementById('row-menu');
+  if(!menu) return;
+  if(activeMenuHabitId === habitId && menu.style.display !== 'none'){
+    closeRowMenu();
+    return;
+  }
+  activeMenuHabitId = habitId;
+  const isFirst = btnEl.dataset.first === 'true';
+  const isLast = btnEl.dataset.last === 'true';
+  menu.querySelector('[data-action="up"]').classList.toggle('is-disabled', isFirst);
+  menu.querySelector('[data-action="down"]').classList.toggle('is-disabled', isLast);
+
+  const rect = btnEl.getBoundingClientRect();
+  menu.style.display = 'flex';
+  const menuWidth = 170;
+  let left = rect.right - menuWidth;
+  if(left < 8) left = 8;
+  menu.style.left = left + 'px';
+  menu.style.top = (rect.bottom + 6) + 'px';
+}
+function closeRowMenu(){
+  activeMenuHabitId = null;
+  const menu = document.getElementById('row-menu');
+  if(menu) menu.style.display = 'none';
+}
+function rowMenuAction(action){
+  const id = activeMenuHabitId;
+  closeRowMenu();
+  if(!id) return;
+  if(action === 'up') moveHabit(id, -1);
+  else if(action === 'down') moveHabit(id, 1);
+  else if(action === 'edit') editHabitName(id);
+  else if(action === 'delete') deleteHabit(id);
+}
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('row-menu');
+  if(!menu || menu.style.display === 'none') return;
+  if(!menu.contains(e.target) && !e.target.closest('.row-menu-btn')) closeRowMenu();
+});
+
 function escapeHtml(str){
   const div = document.createElement('div');
   div.textContent = str;
@@ -454,7 +501,7 @@ function renderHabits(){
     html += `
       <div class="habit-row">
         <div class="habit-row-name">
-          <div class="reorder-btns">
+          <div class="reorder-btns desktop-only">
             <button class="icon-btn ${isFirst ? 'is-disabled' : ''}" title="Yuqoriga surish" onclick="moveHabit('${h.id}', -1)">${upIcon()}</button>
             <button class="icon-btn ${isLast ? 'is-disabled' : ''}" title="Pastga surish" onclick="moveHabit('${h.id}', 1)">${downIcon()}</button>
           </div>
@@ -463,10 +510,11 @@ function renderHabits(){
         <div class="habit-row-days">${dayDots}</div>
         <div class="habit-row-meta">
           <div class="streak-badge">🔥 ${streak}</div>
-          <div class="habit-actions">
+          <div class="habit-actions desktop-only">
             <button class="icon-btn" title="Nomini tahrirlash" onclick="editHabitName('${h.id}')">${editIcon()}</button>
             <button class="icon-btn danger" title="O'chirish" onclick="deleteHabit('${h.id}')">${trashIcon()}</button>
           </div>
+          <button class="icon-btn row-menu-btn mobile-only" title="Boshqarish" data-first="${isFirst}" data-last="${isLast}" onclick="toggleRowMenu('${h.id}', this)">${kebabIcon()}</button>
         </div>
       </div>`;
   });
@@ -585,39 +633,6 @@ function renderJournal(){
   }
 }
 
-async function analyzeJournal(){
-  const btn = document.getElementById('ai-analyze-btn');
-  const resultEl = document.getElementById('ai-analysis-result');
-  if(!btn || !resultEl) return;
-
-  if(state.journal.length === 0){
-    alert("Tahlil qilish uchun avval kamida bitta kundalik yozuvi kerak.");
-    return;
-  }
-
-  const originalText = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = 'Tahlil qilinmoqda...';
-
-  try{
-    const sorted = [...state.journal].sort((a,b) => b.date.localeCompare(a.date)).slice(0, 14);
-    const response = await fetch('/api/analyze', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ entries: sorted })
-    });
-    const data = await response.json();
-    if(!response.ok) throw new Error(data.error || 'Xatolik yuz berdi.');
-    resultEl.textContent = data.analysis;
-    resultEl.style.display = 'block';
-  }catch(err){
-    console.error('AI analysis error', err);
-    alert("Tahlilda xatolik: " + err.message);
-  }finally{
-    btn.disabled = false;
-    btn.textContent = originalText;
-  }
-}
 
 function wireJournalForms(){
   const saveBtn = document.getElementById('journal-save-btn');
@@ -810,7 +825,7 @@ refreshDateHeaders();
 // (required because ES module scope doesn't leak to window automatically)
 Object.assign(window, {
   showView, continueWithName, signInWithGoogle, signOutUser, linkGoogleAccount, toggleDarkMode,
-  cycleStatus, addHabit, deleteHabit, renameHabit, editHabitName, moveHabit, changeWeek,
+  cycleStatus, addHabit, deleteHabit, renameHabit, editHabitName, moveHabit, changeWeek, toggleRowMenu, rowMenuAction,
   addGoal, deleteGoal, updateGoalPercent, renameGoalField, toggleAddGoalForm, makeGoalEditable,
-  deleteJournalEntry, editProfileName, saveProfileName, copyCardNumber, installApp, clearCache, analyzeJournal
+  deleteJournalEntry, editProfileName, saveProfileName, copyCardNumber, installApp, clearCache
 });
