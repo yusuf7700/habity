@@ -1,6 +1,7 @@
 // =====================================================
 // HabitY — Firebase Auth (Google) + Firestore sync
 // =====================================================
+console.log('HabitY build v12 loaded');
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, updateProfile,
