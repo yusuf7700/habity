@@ -310,37 +310,38 @@
   .week-label{ font-family:'IBM Plex Mono'; font-size:13px; font-weight:600; min-width:120px; text-align:center; }
   .week-today-btn{ padding:5px 12px; font-size:12px; }
 
-  .habit-list{ display:flex; flex-direction:column; overflow-x:auto; }
+  .habit-list{ display:flex; flex-direction:column; }
   .habit-row{
-    display:flex;
-    align-items:center;
-    gap: 10px;
-    padding: 10px 2px;
+    display:flex; flex-direction:column; gap:10px;
+    padding: 12px 2px;
     border-top: 1px solid var(--border);
   }
-  .habit-row.header-row{ border-top:none; padding-top:0; padding-bottom:10px; }
-  .habit-row-name{ flex: 1 1 0; display:flex; align-items:center; gap:4px; min-width: 48px; overflow:hidden; }
-  .habit-row-name .hname{
-    font-size:13.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;
+  .habit-row.header-row{ border-top:none; padding-top:0; padding-bottom:8px; gap:0; }
+
+  .habit-row-top{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .hname{
+    font-size:14px; font-weight:600; flex:1 1 auto; min-width:0;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
-  .habit-row-name .hname[contenteditable="true"]{
+  .hname[contenteditable="true"]{
     outline:none; border-bottom: 1px dashed var(--accent); overflow:visible; white-space:normal;
   }
-  /* Fixed width so header (text) and body (dots) columns ALWAYS line up exactly */
+  .habit-row-actions{ display:flex; align-items:center; gap:2px; flex-shrink:0; }
+
+  .habit-row-bottom{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
   .habit-row-days{
-    flex: 0 0 auto; width: 224px;
-    display:grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+    flex: 1 1 auto; display:flex; justify-content:space-between; gap: 6px; max-width: 280px;
   }
-  .day-cell{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; }
+  .habit-row-meta-spacer{ width: 52px; flex-shrink:0; }
+  .day-cell{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; flex:1; }
   .day-cell .day-label{
-    font-size: 10px; font-weight:600; color: var(--ink-faint); text-align:center; line-height:1.3;
+    font-size: 10.5px; font-weight:600; color: var(--ink-faint); text-align:center; line-height:1.3;
   }
   .day-cell .day-label.today-col{ color: var(--accent-dark); font-weight:700; }
-  .habit-row-meta{ flex: 0 0 auto; width: 112px; display:flex; align-items:center; gap:4px; justify-content:flex-end; white-space:nowrap; }
 
   .icon-btn.is-disabled{ opacity: .25; pointer-events: none; }
   .grid-dot{
-    width: clamp(18px, 6.2vw, 22px); height: clamp(18px, 6.2vw, 22px);
+    width: clamp(20px, 6.5vw, 24px); height: clamp(20px, 6.5vw, 24px);
     border-radius:50%; flex-shrink:0;
     background: var(--bg); border: 1.5px solid var(--border);
     cursor:pointer; transition: transform .1s ease;
@@ -354,20 +355,13 @@
   .grid-dot.is-today{ box-shadow: 0 0 0 2px var(--highlight-soft); }
 
   .streak-badge{
-    display:flex; align-items:center; gap:4px;
+    display:flex; align-items:center; gap:4px; flex-shrink:0;
     font-size: 12.5px; font-weight:600; color: var(--highlight);
     background: var(--highlight-soft);
     padding: 4px 9px; border-radius: 20px;
-    flex-shrink:0;
     white-space: nowrap;
+    width: 52px; justify-content:center; box-sizing:border-box;
   }
-  .habit-actions{
-    display:flex; gap:2px; flex-shrink:0;
-  }
-  .hname-row{ display:flex; align-items:center; gap:6px; width:100%; }
-  .reorder-btns{ display:flex; flex-direction:row; gap:0px; flex-shrink:0; }
-  .reorder-btns .icon-btn{ width:20px; height:20px; border-radius:5px; }
-  .reorder-btns .icon-btn svg{ width:13px; height:13px; }
   .icon-btn{
     width:24px; height:24px; border-radius:7px; border:none; background:transparent;
     display:flex; align-items:center; justify-content:center; color: var(--ink-faint);
@@ -582,23 +576,16 @@
   }
 
   @media (max-width: 520px){
-    .habit-row-name .hname{ max-width: 78px; }
-    .habit-row-days{ width: 178px; }
     .grid-dot{ width:18px; height:18px; }
     .day-cell .day-label{ font-size:9px; }
-    .habit-row-meta{ width: 90px; gap:2px; }
-    .habit-row-meta .icon-btn{ width:20px; height:20px; }
-    .habit-row-meta .icon-btn svg{ width:12px; height:12px; }
-    .habit-row-meta .streak-badge{ font-size:11px; padding:3px 6px; }
-    .reorder-btns .icon-btn{ width:16px; height:16px; }
-    .reorder-btns .icon-btn svg{ width:10px; height:10px; }
+    .habit-row-actions .icon-btn{ width:20px; height:20px; }
+    .habit-row-actions .icon-btn svg{ width:12px; height:12px; }
+    .streak-badge{ font-size:11px; padding:3px 6px; width:44px; }
+    .habit-row-meta-spacer{ width:44px; }
   }
   @media (max-width: 360px){
-    .habit-row-name .hname{ max-width: 52px; }
-    .habit-row-days{ width: 152px; }
-    .grid-dot{ width:15px; height:15px; }
-    .habit-row-meta{ width: 78px; }
-    .habit-row-meta .icon-btn{ width:18px; height:18px; }
+    .grid-dot{ width:16px; height:16px; }
+    .habit-row-actions{ gap:0; }
   }
 
   @media (prefers-reduced-motion: reduce){
