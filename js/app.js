@@ -1,7 +1,7 @@
 // =====================================================
 // HabitY — Firebase Auth (Google) + Firestore sync
 // =====================================================
-console.log('HabitY build v13 loaded');
+console.log('HabitY build v14 loaded');
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, updateProfile,
@@ -9,7 +9,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import {
   initializeFirestore, persistentLocalCache, persistentSingleTabManager,
-  collection, doc, addDoc, setDoc, updateDoc, deleteDoc,
+  collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc,
   onSnapshot, deleteField, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
@@ -60,7 +60,7 @@ let state = { habits: [], goals: [], journal: [], darkMode: loadDarkPref() };
 function signInWithGoogle(){
   signInWithPopup(auth, googleProvider).catch(err => {
     console.error('Google sign-in error', err);
-    alert("Kirishda xatolik yuz berdi. Qaytadan urinib ko'ring.");
+    showToast("Kirishda xatolik yuz berdi. Qaytadan urinib ko'ring.", 'error');
   });
 }
 function signOutUser(){
@@ -74,9 +74,9 @@ function linkGoogleAccount(){
     .catch(err => {
       console.error('Link account error', err);
       if(err.code === 'auth/credential-already-in-use'){
-        alert("Bu Google hisobi allaqachon boshqa HabitY hisobiga ulangan. Iltimos, chiqib, to'g'ridan-to'g'ri Google orqali kiring.");
+        showToast("Bu Google hisobi allaqachon boshqa HabitY hisobiga ulangan. Iltimos, chiqib, to'g'ridan-to'g'ri Google orqali kiring.", 'error');
       }else{
-        alert("Bog'lashda xatolik: " + err.message);
+        showToast("Bog'lashda xatolik: " + err.message, 'error');
       }
     });
 }
@@ -84,13 +84,13 @@ function linkGoogleAccount(){
 function continueWithName(){
   const input = document.getElementById('guest-name');
   const name = (input ? input.value : '').trim();
-  if(!name){ alert("Iltimos, avval ismingizni kiriting."); return; }
+  if(!name){ showToast("Iltimos, avval ismingizni kiriting.", 'error'); return; }
   signInAnonymously(auth)
     .then(cred => updateProfile(cred.user, { displayName: name }))
     .then(() => { if(auth.currentUser) applyUserUI(auth.currentUser); })
     .catch(err => {
       console.error('Anonymous sign-in error', err);
-      alert("Kirishda xatolik: " + err.message);
+      showToast("Kirishda xatolik: " + err.message, 'error');
     });
 }
 
@@ -180,7 +180,7 @@ function saveProfileName(newName){
   if(!trimmed || !currentUser) return;
   updateProfile(currentUser, { displayName: trimmed })
     .then(() => applyUserUI(auth.currentUser))
-    .catch(err => alert("Ismni saqlashda xatolik: " + err.message));
+    .catch(err => showToast("Ismni saqlashda xatolik: " + err.message, 'error'));
 }
 
 function copyCardNumber(){
@@ -192,7 +192,8 @@ function copyCardNumber(){
       label.textContent = "Nusxalandi!";
       setTimeout(() => { label.textContent = old; }, 1500);
     }
-  }).catch(() => alert("Nusxalashda xatolik. Raqam: " + raw));
+    showToast("Karta raqami nusxalandi!", 'success');
+  }).catch(() => showToast("Nusxalashda xatolik. Raqam: " + raw, 'error'));
 }
 
 onAuthStateChanged(auth, user => {
@@ -205,6 +206,7 @@ onAuthStateChanged(auth, user => {
     document.getElementById('app-shell').classList.add('active');
     applyUserUI(user);
     subscribeToUserData(user.uid);
+    loadNotifPrefs(user.uid);
   }else{
     currentUser = null;
     unsubscribeAll();
@@ -320,8 +322,17 @@ function cycleStatus(habitId, dateKey){
   const idx = STATUS_CYCLE.indexOf(current);
   const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
   const ref = doc(db, 'users', currentUser.uid, 'habits', habitId);
+
+  vibrate(15);
+
+  if(dateKey === todayISO() && next === 'green'){
+    const optimisticLogs = { ...habit.logs, [dateKey]: 'green' };
+    const newStreak = computeCurrentStreak({ logs: optimisticLogs });
+    maybeCelebrateStreak(newStreak);
+  }
+
   updateDoc(ref, { [`logs.${dateKey}`]: next === null ? deleteField() : next })
-    .catch(err => console.error('cycleStatus error', err));
+    .catch(err => { console.error('cycleStatus error', err); showToast('Xatolik: ' + err.message, 'error'); });
 }
 
 function computeCurrentStreak(habit){
@@ -367,7 +378,7 @@ function addHabit(name){
   if(!trimmed || !currentUser) return;
   const maxOrder = state.habits.reduce((m, h, i) => Math.max(m, typeof h.order === 'number' ? h.order : i), -1);
   addDoc(collection(db, 'users', currentUser.uid, 'habits'), { name: trimmed, logs: {}, order: maxOrder + 1, createdAt: serverTimestamp() })
-    .catch(err => alert("Odat qo'shishda xatolik: " + err.message));
+    .catch(err => showToast("Odat qo'shishda xatolik: " + err.message, 'error'));
 }
 function moveHabit(id, direction){
   if(!currentUser) return;
@@ -385,8 +396,11 @@ function moveHabit(id, direction){
 }
 function deleteHabit(id){
   if(!currentUser) return;
-  if(!confirm("Bu odatni o'chirmoqchimisiz? Barcha tarix ham o'chib ketadi.")) return;
-  deleteDoc(doc(db, 'users', currentUser.uid, 'habits', id)).catch(err => alert('Xatolik: ' + err.message));
+  showConfirm("Bu odatni o'chirmoqchimisiz? Barcha tarix ham o'chib ketadi.", () => {
+    deleteDoc(doc(db, 'users', currentUser.uid, 'habits', id))
+      .then(() => showToast("Odat o'chirildi", 'success'))
+      .catch(err => showToast('Xatolik: ' + err.message, 'error'));
+  });
 }
 function renameHabit(id, newName){
   const trimmed = (newName || '').trim();
@@ -534,17 +548,22 @@ function renderStats(){
 // =====================================================
 function saveJournalEntry(mood, sleep, text){
   const trimmed = (text || '').trim();
-  if(!trimmed){ alert("Iltimos, avval bugungi kayfiyatingiz haqida bir necha jumla yozing."); return; }
+  if(!trimmed){ showToast("Iltimos, avval bugungi kayfiyatingiz haqida bir necha jumla yozing.", 'error'); return; }
   if(!currentUser) return;
   const today = todayISO();
   setDoc(doc(db, 'users', currentUser.uid, 'journal', today), {
     mood, sleep, text: trimmed, updatedAt: serverTimestamp()
-  }, { merge: true }).catch(err => alert('Saqlashda xatolik: ' + err.message));
+  }, { merge: true })
+    .then(() => showToast("Kundalik saqlandi", 'success'))
+    .catch(err => showToast('Saqlashda xatolik: ' + err.message, 'error'));
 }
 function deleteJournalEntry(id){
   if(!currentUser) return;
-  if(!confirm("Bu yozuvni o'chirmoqchimisiz?")) return;
-  deleteDoc(doc(db, 'users', currentUser.uid, 'journal', id)).catch(err => console.error(err));
+  showConfirm("Bu yozuvni o'chirmoqchimisiz?", () => {
+    deleteDoc(doc(db, 'users', currentUser.uid, 'journal', id))
+      .then(() => showToast("Yozuv o'chirildi", 'success'))
+      .catch(err => showToast('Xatolik: ' + err.message, 'error'));
+  });
 }
 
 function formatEntryDate(iso){
@@ -619,14 +638,17 @@ function addGoal(name, deadline){
   if(!trimmed || !currentUser) return;
   addDoc(collection(db, 'users', currentUser.uid, 'goals'), {
     name: trimmed, deadline: (deadline || '').trim() || 'Muddat belgilanmagan', percent: 0, createdAt: serverTimestamp()
-  }).catch(err => alert("Maqsad qo'shishda xatolik: " + err.message));
+  }).catch(err => showToast("Maqsad qo'shishda xatolik: " + err.message, 'error'));
   showAddGoalForm = false;
   renderGoals();
 }
 function deleteGoal(id){
   if(!currentUser) return;
-  if(!confirm("Bu maqsadni o'chirmoqchimisiz?")) return;
-  deleteDoc(doc(db, 'users', currentUser.uid, 'goals', id)).catch(err => console.error(err));
+  showConfirm("Bu maqsadni o'chirmoqchimisiz?", () => {
+    deleteDoc(doc(db, 'users', currentUser.uid, 'goals', id))
+      .then(() => showToast("Maqsad o'chirildi", 'success'))
+      .catch(err => showToast('Xatolik: ' + err.message, 'error'));
+  });
 }
 function updateGoalPercent(id, value){
   if(!currentUser) return;
@@ -734,9 +756,16 @@ function installApp(){
     deferredInstallPrompt.prompt();
     deferredInstallPrompt.userChoice.finally(() => { deferredInstallPrompt = null; });
   }else if(window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone){
-    alert("HabitY allaqachon ilova sifatida o'rnatilgan.");
+    showToast("HabitY allaqachon ilova sifatida o'rnatilgan.", 'success');
   }else{
-    alert("Brauzeringiz avtomatik o'rnatishni qo'llab-quvvatlamaydi. iPhone/iPad'da: pastdagi Share tugmasi → \"Add to Home Screen\"ni tanlang.");
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if(isIOS){
+      const overlay = document.getElementById('ios-install-overlay');
+      if(overlay) overlay.style.display = 'flex';
+    }else{
+      showToast("Brauzeringiz avtomatik o'rnatishni hozircha qo'llab-quvvatlamaydi.", 'error');
+    }
   }
 }
 
@@ -746,16 +775,118 @@ if('serviceWorker' in navigator){
   });
 }
 
+// =====================================================
+// UX YORDAMCHILARI: toast, tasdiqlash oynasi, haptika, streak bayrami
+// =====================================================
+function showToast(message, type){
+  const container = document.getElementById('toast-container');
+  if(!container){ console.log(message); return; }
+  const el = document.createElement('div');
+  el.className = 'toast' + (type ? ' ' + type : '');
+  el.textContent = message;
+  container.appendChild(el);
+  setTimeout(() => {
+    el.classList.add('leaving');
+    setTimeout(() => el.remove(), 200);
+  }, 3000);
+}
+
+let pendingConfirmCallback = null;
+function showConfirm(message, onConfirm){
+  pendingConfirmCallback = onConfirm;
+  const overlay = document.getElementById('confirm-overlay');
+  const msgEl = document.getElementById('confirm-message');
+  if(msgEl) msgEl.textContent = message;
+  if(overlay) overlay.style.display = 'flex';
+}
+function acceptConfirm(){
+  const cb = pendingConfirmCallback;
+  cancelConfirm();
+  if(cb) cb();
+}
+function cancelConfirm(){
+  pendingConfirmCallback = null;
+  const overlay = document.getElementById('confirm-overlay');
+  if(overlay) overlay.style.display = 'none';
+}
+
+function closeIosInstallInfo(){
+  const overlay = document.getElementById('ios-install-overlay');
+  if(overlay) overlay.style.display = 'none';
+}
+
+function vibrate(pattern){
+  if('vibrate' in navigator){
+    try{ navigator.vibrate(pattern); }catch(e){}
+  }
+}
+
+const STREAK_MILESTONES = [3, 7, 14, 21, 30, 50, 100, 200, 365];
+function maybeCelebrateStreak(streak){
+  if(!STREAK_MILESTONES.includes(streak)) return;
+  const overlay = document.getElementById('celebration-overlay');
+  if(!overlay) return;
+  vibrate([30, 40, 30]);
+  const colors = ['#3F6B54', '#B8763E', '#E4B23C', '#7CB69A'];
+  let confettiHtml = '';
+  for(let i = 0; i < 24; i++){
+    const left = Math.random() * 100;
+    const delay = Math.random() * 0.3;
+    const color = colors[i % colors.length];
+    confettiHtml += `<div class="confetti-piece" style="left:${left}%; background:${color}; animation-delay:${delay}s;"></div>`;
+  }
+  overlay.innerHTML = confettiHtml + `<div class="celebration-badge">🔥 ${streak} kunlik streak!</div>`;
+  overlay.style.display = 'flex';
+  setTimeout(() => { overlay.style.display = 'none'; overlay.innerHTML = ''; }, 1600);
+}
+
+// =====================================================
+// BILDIRISHNOMA SOZLAMALARI (Firestore'da saqlanadi)
+// =====================================================
+const NOTIF_DEFAULTS = { daily: true, streak: true, weekly: false };
+
+function loadNotifPrefs(uid){
+  getDoc(doc(db, 'users', uid)).then(snap => {
+    const prefs = (snap.exists() && snap.data().notifPrefs) || NOTIF_DEFAULTS;
+    ['daily', 'streak', 'weekly'].forEach(key => {
+      const btn = document.getElementById('notif-' + key + '-toggle');
+      if(btn) btn.classList.toggle('on', !!prefs[key]);
+    });
+  }).catch(err => console.warn('Notif prefs load error', err));
+}
+
+function toggleNotifPref(key, btnEl){
+  if(!currentUser) return;
+  const isOn = !btnEl.classList.contains('on');
+  btnEl.classList.toggle('on', isOn);
+
+  if(isOn && 'Notification' in window && Notification.permission === 'default'){
+    Notification.requestPermission().then(permission => {
+      if(permission !== 'granted'){
+        showToast("Bildirishnoma ruxsati berilmadi — brauzer sozlamalaridan yoqishingiz mumkin.", 'error');
+      }
+    });
+  }
+
+  setDoc(doc(db, 'users', currentUser.uid), { notifPrefs: { [key]: isOn } }, { merge: true })
+    .then(() => showToast(isOn ? "Yoqildi" : "O'chirildi", 'success'))
+    .catch(err => {
+      btnEl.classList.toggle('on', !isOn);
+      showToast('Xatolik: ' + err.message, 'error');
+    });
+}
+
 function clearCache(){
-  if(!confirm("Keshni tozalash sahifani qayta yuklaydi. Davom etamizmi?")) return;
-  const done = () => { window.location.reload(); };
-  const clearCaches = ('caches' in window)
-    ? caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
-    : Promise.resolve();
-  const clearSW = ('serviceWorker' in navigator)
-    ? navigator.serviceWorker.getRegistrations().then(regs => Promise.all(regs.map(r => r.unregister())))
-    : Promise.resolve();
-  Promise.all([clearCaches, clearSW]).then(done).catch(done);
+  showConfirm("Keshni tozalash sahifani qayta yuklaydi. Davom etamizmi?", () => {
+    const done = () => { window.location.reload(); };
+    const clearCaches = ('caches' in window)
+      ? caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
+      : Promise.resolve();
+    const clearSW = ('serviceWorker' in navigator)
+      ? navigator.serviceWorker.getRegistrations().then(regs => Promise.all(regs.map(r => r.unregister())))
+      : Promise.resolve();
+    Promise.all([clearCaches, clearSW]).then(done).catch(done);
+  });
 }
 
 // =====================================================
@@ -780,5 +911,6 @@ Object.assign(window, {
   showView, continueWithName, signInWithGoogle, signOutUser, linkGoogleAccount, toggleDarkMode,
   cycleStatus, addHabit, deleteHabit, renameHabit, editHabitName, moveHabit, changeWeek,
   addGoal, deleteGoal, updateGoalPercent, renameGoalField, toggleAddGoalForm, makeGoalEditable,
-  deleteJournalEntry, editProfileName, saveProfileName, copyCardNumber, installApp, clearCache
+  deleteJournalEntry, editProfileName, saveProfileName, copyCardNumber, installApp, clearCache,
+  acceptConfirm, cancelConfirm, closeIosInstallInfo, toggleNotifPref
 });
