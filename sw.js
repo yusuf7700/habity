@@ -1,9 +1,9 @@
-const CACHE_NAME = 'habity-cache-v11';
+const CACHE_NAME = 'habity-cache-v12';
 const CORE_ASSETS = [
   './',
   './index.html',
-  './css/style.css?v=12',
-  './js/app.js?v=12',
+  './css/style.css?v=13',
+  './js/app.js?v=13',
   './img/logo.png'
 ];
 
