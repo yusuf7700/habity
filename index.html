@@ -28,7 +28,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=12">
+<link rel="stylesheet" href="css/style.css?v=13">
 </head>
 <body>
 
@@ -141,12 +141,6 @@
         </div>
         <div class="habit-list" id="habit-list"></div>
         <div class="empty-state" id="habit-grid-empty" style="display:none;">Hali odat qo'shilmagan.<br>Pastdagi maydondan birinchi odatingizni qo'shing.</div>
-        <div class="row-menu" id="row-menu" style="display:none;">
-          <button data-action="up" onclick="rowMenuAction('up')">⬆ Yuqoriga surish</button>
-          <button data-action="down" onclick="rowMenuAction('down')">⬇ Pastga surish</button>
-          <button data-action="edit" onclick="rowMenuAction('edit')">✎ Nomini tahrirlash</button>
-          <button data-action="delete" class="danger" onclick="rowMenuAction('delete')">🗑 O'chirish</button>
-        </div>
         <div class="add-habit-row">
           <input type="text" id="new-habit-input" placeholder="Yangi odat qo'shish, masalan: Kuniga 30 daqiqa yugurish" onkeydown="if(event.key==='Enter'){ addHabit(this.value); this.value=''; }">
           <button class="btn btn-primary" onclick="const i=document.getElementById('new-habit-input'); addHabit(i.value); i.value='';">Qo'shish</button>
@@ -381,7 +375,7 @@
         </div>
       </div>
 
-      <p style="text-align:center; font-size:11px; color:var(--ink-faint); margin-top:8px;">HabitY build v12</p>
+      <p style="text-align:center; font-size:11px; color:var(--ink-faint); margin-top:8px;">HabitY build v13</p>
     </section>
 
   </main>
@@ -414,6 +408,6 @@
   </nav>
 </div>
 
-<script type="module" src="js/app.js?v=12"></script>
+<script type="module" src="js/app.js?v=13"></script>
 </body>
 </html>
