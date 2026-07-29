@@ -1,7 +1,7 @@
 // =====================================================
 // HabitY — Firebase Auth (Google) + Firestore sync
 // =====================================================
-console.log('HabitY build v12 loaded');
+console.log('HabitY build v13 loaded');
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, updateProfile,
@@ -262,52 +262,6 @@ function upIcon(){
 function downIcon(){
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
 }
-function kebabIcon(){
-  return '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>';
-}
-
-// ---------- Mobile row menu (up/down/edit/delete collapsed into one button) ----------
-let activeMenuHabitId = null;
-function toggleRowMenu(habitId, btnEl){
-  const menu = document.getElementById('row-menu');
-  if(!menu) return;
-  if(activeMenuHabitId === habitId && menu.style.display !== 'none'){
-    closeRowMenu();
-    return;
-  }
-  activeMenuHabitId = habitId;
-  const isFirst = btnEl.dataset.first === 'true';
-  const isLast = btnEl.dataset.last === 'true';
-  menu.querySelector('[data-action="up"]').classList.toggle('is-disabled', isFirst);
-  menu.querySelector('[data-action="down"]').classList.toggle('is-disabled', isLast);
-
-  const rect = btnEl.getBoundingClientRect();
-  menu.style.display = 'flex';
-  const menuWidth = 170;
-  let left = rect.right - menuWidth;
-  if(left < 8) left = 8;
-  menu.style.left = left + 'px';
-  menu.style.top = (rect.bottom + 6) + 'px';
-}
-function closeRowMenu(){
-  activeMenuHabitId = null;
-  const menu = document.getElementById('row-menu');
-  if(menu) menu.style.display = 'none';
-}
-function rowMenuAction(action){
-  const id = activeMenuHabitId;
-  closeRowMenu();
-  if(!id) return;
-  if(action === 'up') moveHabit(id, -1);
-  else if(action === 'down') moveHabit(id, 1);
-  else if(action === 'edit') editHabitName(id);
-  else if(action === 'delete') deleteHabit(id);
-}
-document.addEventListener('click', (e) => {
-  const menu = document.getElementById('row-menu');
-  if(!menu || menu.style.display === 'none') return;
-  if(!menu.contains(e.target) && !e.target.closest('.row-menu-btn')) closeRowMenu();
-});
 
 function escapeHtml(str){
   const div = document.createElement('div');
@@ -477,9 +431,10 @@ function renderHabits(){
 
   let html = `
     <div class="habit-row header-row">
-      <div class="habit-row-name"></div>
-      <div class="habit-row-days">${headerDays}</div>
-      <div class="habit-row-meta"></div>
+      <div class="habit-row-bottom">
+        <div class="habit-row-days">${headerDays}</div>
+        <div class="habit-row-meta-spacer"></div>
+      </div>
     </div>`;
 
   sortedHabits.forEach((h, rowIdx) => {
@@ -501,21 +456,18 @@ function renderHabits(){
 
     html += `
       <div class="habit-row">
-        <div class="habit-row-name">
-          <div class="reorder-btns desktop-only">
+        <div class="habit-row-top">
+          <div class="hname" data-id="${h.id}" onblur="renameHabit('${h.id}', this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}">${escapeHtml(h.name)}</div>
+          <div class="habit-row-actions">
             <button class="icon-btn ${isFirst ? 'is-disabled' : ''}" title="Yuqoriga surish" onclick="moveHabit('${h.id}', -1)">${upIcon()}</button>
             <button class="icon-btn ${isLast ? 'is-disabled' : ''}" title="Pastga surish" onclick="moveHabit('${h.id}', 1)">${downIcon()}</button>
-          </div>
-          <div class="hname" data-id="${h.id}" onblur="renameHabit('${h.id}', this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}">${escapeHtml(h.name)}</div>
-        </div>
-        <div class="habit-row-days">${dayDots}</div>
-        <div class="habit-row-meta">
-          <div class="streak-badge">🔥 ${streak}</div>
-          <div class="habit-actions desktop-only">
             <button class="icon-btn" title="Nomini tahrirlash" onclick="editHabitName('${h.id}')">${editIcon()}</button>
             <button class="icon-btn danger" title="O'chirish" onclick="deleteHabit('${h.id}')">${trashIcon()}</button>
           </div>
-          <button class="icon-btn row-menu-btn mobile-only" title="Boshqarish" data-first="${isFirst}" data-last="${isLast}" onclick="toggleRowMenu('${h.id}', this)">${kebabIcon()}</button>
+        </div>
+        <div class="habit-row-bottom">
+          <div class="habit-row-days">${dayDots}</div>
+          <div class="streak-badge">🔥 ${streak}</div>
         </div>
       </div>`;
   });
@@ -826,7 +778,7 @@ refreshDateHeaders();
 // (required because ES module scope doesn't leak to window automatically)
 Object.assign(window, {
   showView, continueWithName, signInWithGoogle, signOutUser, linkGoogleAccount, toggleDarkMode,
-  cycleStatus, addHabit, deleteHabit, renameHabit, editHabitName, moveHabit, changeWeek, toggleRowMenu, rowMenuAction,
+  cycleStatus, addHabit, deleteHabit, renameHabit, editHabitName, moveHabit, changeWeek,
   addGoal, deleteGoal, updateGoalPercent, renameGoalField, toggleAddGoalForm, makeGoalEditable,
   deleteJournalEntry, editProfileName, saveProfileName, copyCardNumber, installApp, clearCache
 });
