@@ -28,7 +28,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=13">
+<link rel="stylesheet" href="css/style.css?v=14">
 </head>
 <body>
 
@@ -322,17 +322,18 @@
       <div class="card settings-section">
         <h3>Bildirishnomalar</h3>
         <div class="setting-row">
-          <div><div class="stitle">Kunlik eslatma</div><div class="sdesc">Har kuni soat 20:00 da odatlaringizni belgilashni eslatadi</div></div>
-          <button class="toggle on" onclick="this.classList.toggle('on')"></button>
+          <div><div class="stitle">Kunlik eslatma</div><div class="sdesc">Har kuni kechqurun odatlaringizni belgilashni eslatadi</div></div>
+          <button class="toggle" id="notif-daily-toggle" onclick="toggleNotifPref('daily', this)"></button>
         </div>
         <div class="setting-row">
           <div><div class="stitle">Streak ogohlantirishi</div><div class="sdesc">Streak uzilishi arafasida xabar beradi</div></div>
-          <button class="toggle on" onclick="this.classList.toggle('on')"></button>
+          <button class="toggle" id="notif-streak-toggle" onclick="toggleNotifPref('streak', this)"></button>
         </div>
         <div class="setting-row">
           <div><div class="stitle">Haftalik hisobot</div><div class="sdesc">Har yakshanba progress xulosasi yuboriladi</div></div>
-          <button class="toggle" onclick="this.classList.toggle('on')"></button>
+          <button class="toggle" id="notif-weekly-toggle" onclick="toggleNotifPref('weekly', this)"></button>
         </div>
+        <p style="font-size:11.5px; color:var(--ink-faint); margin:12px 0 0;">Bildirishnomalarni yoqish uchun brauzer ruxsati so'raladi.</p>
       </div>
 
       <div class="card settings-section">
@@ -375,7 +376,7 @@
         </div>
       </div>
 
-      <p style="text-align:center; font-size:11px; color:var(--ink-faint); margin-top:8px;">HabitY build v13</p>
+      <p style="text-align:center; font-size:11px; color:var(--ink-faint); margin-top:8px;">HabitY build v14</p>
     </section>
 
   </main>
@@ -408,6 +409,38 @@
   </nav>
 </div>
 
-<script type="module" src="js/app.js?v=13"></script>
+<!-- ============ TOAST ============ -->
+<div id="toast-container"></div>
+
+<!-- ============ CONFIRM MODAL ============ -->
+<div id="confirm-overlay" class="modal-overlay" style="display:none;" onclick="if(event.target===this) cancelConfirm()">
+  <div class="modal-card">
+    <p id="confirm-message"></p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="cancelConfirm()">Bekor qilish</button>
+      <button class="btn btn-primary" id="confirm-ok-btn" onclick="acceptConfirm()">Ha, davom etish</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ iOS INSTALL INFO MODAL ============ -->
+<div id="ios-install-overlay" class="modal-overlay" style="display:none;" onclick="if(event.target===this) closeIosInstallInfo()">
+  <div class="modal-card">
+    <h3>iPhone/iPad'ga o'rnatish</h3>
+    <ol class="ios-steps">
+      <li>Saytni <strong>Safari</strong>'da oching (Chrome'da emas)</li>
+      <li>Pastdagi <strong>Ulashish</strong> (Share) tugmasini bosing</li>
+      <li><strong>"Add to Home Screen"</strong> (Bosh ekranga qo'shish)ni tanlang</li>
+    </ol>
+    <div class="modal-actions">
+      <button class="btn btn-primary" style="width:100%;" onclick="closeIosInstallInfo()">Tushunarli</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ STREAK CELEBRATION ============ -->
+<div id="celebration-overlay" style="display:none;"></div>
+
+<script type="module" src="js/app.js?v=14"></script>
 </body>
 </html>
