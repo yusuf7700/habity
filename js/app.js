@@ -10,8 +10,11 @@ import {
 import {
   initializeFirestore, persistentLocalCache, persistentSingleTabManager,
   collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc,
-  onSnapshot, deleteField, serverTimestamp
+  onSnapshot, deleteField, serverTimestamp, arrayUnion, arrayRemove
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+import {
+  getMessaging, getToken, onMessage, isSupported as isMessagingSupported
+} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-messaging.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDFWsq8IYOC18OZ_01pxXIFyrLvI7GUJ84",
@@ -29,6 +32,11 @@ const db = initializeFirestore(fbApp, {
   localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() })
 });
 const googleProvider = new GoogleAuthProvider();
+
+// Firebase Console → Project Settings → Cloud Messaging → Web Push certificates
+// dan olingan kalitni shu yerga qo'ying:
+const FCM_VAPID_KEY = "BDVcR7bNOI-7d5dVM6fnctKWGY1eMD-kdFQbba1ARAO-j2iu6F_bwUzNExYxQ7yI9pLid_qtqYIze5QB9Bz4j6s";
+let messaging = null;
 
 let currentUser = null;
 let unsubscribers = [];
@@ -852,6 +860,11 @@ function loadNotifPrefs(uid){
       const btn = document.getElementById('notif-' + key + '-toggle');
       if(btn) btn.classList.toggle('on', !!prefs[key]);
     });
+    // Agar avvaldan ruxsat berilgan bo'lsa va biror toggle yoqilgan bo'lsa, tokenni yangilab qo'yamiz
+    if('Notification' in window && Notification.permission === 'granted' &&
+       (prefs.daily || prefs.streak || prefs.weekly)){
+      registerFcmToken();
+    }
   }).catch(err => console.warn('Notif prefs load error', err));
 }
 
@@ -860,21 +873,82 @@ function toggleNotifPref(key, btnEl){
   const isOn = !btnEl.classList.contains('on');
   btnEl.classList.toggle('on', isOn);
 
-  if(isOn && 'Notification' in window && Notification.permission === 'default'){
-    Notification.requestPermission().then(permission => {
-      if(permission !== 'granted'){
-        showToast("Bildirishnoma ruxsati berilmadi — brauzer sozlamalaridan yoqishingiz mumkin.", 'error');
-      }
-    });
+  const applyPref = () => {
+    setDoc(doc(db, 'users', currentUser.uid), { notifPrefs: { [key]: isOn } }, { merge: true })
+      .then(() => showToast(isOn ? "Yoqildi" : "O'chirildi", 'success'))
+      .catch(err => {
+        btnEl.classList.toggle('on', !isOn);
+        showToast('Xatolik: ' + err.message, 'error');
+      });
+  };
+
+  if(!isOn){ applyPref(); return; }
+
+  if(!('Notification' in window)){
+    showToast("Brauzeringiz bildirishnomalarni qo'llab-quvvatlamaydi.", 'error');
+    btnEl.classList.toggle('on', false);
+    return;
   }
 
-  setDoc(doc(db, 'users', currentUser.uid), { notifPrefs: { [key]: isOn } }, { merge: true })
-    .then(() => showToast(isOn ? "Yoqildi" : "O'chirildi", 'success'))
-    .catch(err => {
-      btnEl.classList.toggle('on', !isOn);
-      showToast('Xatolik: ' + err.message, 'error');
+  if(Notification.permission === 'granted'){
+    registerFcmToken().finally(applyPref);
+  }else if(Notification.permission === 'default'){
+    Notification.requestPermission().then(permission => {
+      if(permission === 'granted'){
+        registerFcmToken().finally(applyPref);
+      }else{
+        showToast("Bildirishnoma ruxsati berilmadi — brauzer sozlamalaridan yoqishingiz mumkin.", 'error');
+        btnEl.classList.toggle('on', false);
+      }
     });
+  }else{
+    showToast("Bildirishnomalar brauzer sozlamalarida bloklangan. Sayt sozlamalaridan ruxsat bering.", 'error');
+    btnEl.classList.toggle('on', false);
+  }
 }
+
+// =====================================================
+// FCM — token olish va Firestore'ga saqlash
+// =====================================================
+async function registerFcmToken(){
+  if(!currentUser) return;
+  try{
+    const supported = await isMessagingSupported().catch(() => false);
+    if(!supported){
+      console.warn('FCM bu brauzerda qo\'llab-quvvatlanmaydi');
+      return;
+    }
+    if(!messaging) messaging = getMessaging(fbApp);
+    const reg = await navigator.serviceWorker.ready;
+    const token = await getToken(messaging, {
+      vapidKey: FCM_VAPID_KEY,
+      serviceWorkerRegistration: reg
+    });
+    if(!token){
+      console.warn('FCM token olinmadi (ruxsat yo\'q bo\'lishi mumkin)');
+      return;
+    }
+    await setDoc(doc(db, 'users', currentUser.uid), {
+      fcmTokens: arrayUnion(token)
+    }, { merge: true });
+  }catch(err){
+    console.error('FCM token error', err);
+    showToast("Bildirishnoma tokenini olishda xatolik: " + err.message, 'error');
+  }
+}
+
+// Ilova ochiq bo'lganida (foreground) FCM xabari kelsa — toast ko'rsatamiz
+(async () => {
+  try{
+    const supported = await isMessagingSupported().catch(() => false);
+    if(!supported) return;
+    if(!messaging) messaging = getMessaging(fbApp);
+    onMessage(messaging, (payload) => {
+      const n = payload.notification || {};
+      showToast(n.title ? `${n.title}: ${n.body || ''}` : (n.body || 'Yangi bildirishnoma'), 'success');
+    });
+  }catch(e){ /* messaging not supported, ignore */ }
+})();
 
 function clearCache(){
   showConfirm("Keshni tozalash sahifani qayta yuklaydi. Davom etamizmi?", () => {
