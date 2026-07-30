@@ -1,4 +1,4 @@
-const CACHE_NAME = 'habity-cache-v13';
+const CACHE_NAME = 'habity-cache-v14';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -33,5 +33,41 @@ self.addEventListener('fetch', (event) => {
         return res;
       })
       .catch(() => caches.match(event.request))
+  );
+});
+
+// =====================================================
+// FCM — background push xabarlarini ko'rsatish
+// =====================================================
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+  let payload;
+  try {
+    payload = event.data.json();
+  } catch (e) {
+    return;
+  }
+  const data = payload.notification || payload.data || {};
+  const title = data.title || 'HabitY';
+  const options = {
+    body: data.body || '',
+    icon: './img/logo.png',
+    badge: './img/logo.png',
+    data: { url: (payload.data && payload.data.url) || './index.html' },
+    tag: (payload.data && payload.data.type) || 'habity-notif'
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = (event.notification.data && event.notification.data.url) || './index.html';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url.includes(targetUrl) && 'focus' in client) return client.focus();
+      }
+      if (clients.openWindow) return clients.openWindow(targetUrl);
+    })
   );
 });
