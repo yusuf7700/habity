@@ -28,7 +28,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=14">
+<link rel="stylesheet" href="css/style.css?v=15">
 </head>
 <body>
 
@@ -67,6 +67,10 @@
 
 <!-- ============ APP SHELL ============ -->
 <div id="app-shell">
+  <div class="offline-banner" id="offline-banner" style="display:none;">
+    <span class="offline-dot"></span>
+    Oflaynsiz — o'zgarishlaringiz saqlanmoqda, internet qaytganda avtomatik yuboriladi
+  </div>
   <aside class="sidebar">
     <div class="brand"><img class="brand-logo" src="img/logo.png" alt="HabitY"></div>
     <nav>
@@ -213,7 +217,26 @@
         <div class="today mono" id="today-date-2"></div>
       </div>
 
+      <div class="missed-days-banner" id="missed-days-banner" style="display:none;">
+        <div class="mdb-icon">💭</div>
+        <div class="mdb-body">
+          <div class="mdb-title">Ba'zi kunlarni to'ldirmagansiz</div>
+          <div class="mdb-chips" id="missed-days-chips"></div>
+        </div>
+      </div>
+
       <div class="card journal-editor">
+        <div class="journal-date-row">
+          <div class="date-chips" id="journal-date-chips">
+            <button type="button" class="date-chip active" data-offset="0">Bugun</button>
+            <button type="button" class="date-chip" data-offset="1">Kecha</button>
+            <button type="button" class="date-chip" data-offset="2">2 kun oldin</button>
+          </div>
+          <div class="custom-date-wrap">
+            <input type="date" id="journal-custom-date" class="custom-date-input">
+          </div>
+        </div>
+        <div class="editing-for-label" id="editing-for-label"></div>
         <div class="sliders-row">
           <div class="slider-block">
             <div class="slider-label"><span>Kayfiyat</span><span class="val" id="j-mood-val">7</span></div>
@@ -224,7 +247,7 @@
             <input type="range" min="1" max="10" value="6" oninput="document.getElementById('j-sleep-val').textContent=this.value">
           </div>
         </div>
-        <textarea id="journal-textarea" placeholder="Bugun qanday o'tdi? Nimalar sizni xursand yoki tashvishga soldi?"></textarea>
+        <textarea id="journal-textarea" placeholder="O'sha kun qanday o'tdi? Nimalar sizni xursand yoki tashvishga soldi?"></textarea>
         <div class="save-row">
           <button class="btn btn-primary" id="journal-save-btn">Yozuvni saqlash</button>
         </div>
@@ -441,6 +464,6 @@
 <!-- ============ STREAK CELEBRATION ============ -->
 <div id="celebration-overlay" style="display:none;"></div>
 
-<script type="module" src="js/app.js?v=14"></script>
+<script type="module" src="js/app.js?v=15"></script>
 </body>
 </html>
