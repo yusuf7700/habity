@@ -554,12 +554,14 @@ function renderStats(){
 // =====================================================
 // KUNDALIK (Journal)
 // =====================================================
-function saveJournalEntry(mood, sleep, text){
+let journalSelectedDate = todayISO();
+
+function saveJournalEntry(mood, sleep, text, dateKey){
+  const targetDate = dateKey || todayISO();
   const trimmed = (text || '').trim();
-  if(!trimmed){ showToast("Iltimos, avval bugungi kayfiyatingiz haqida bir necha jumla yozing.", 'error'); return; }
+  if(!trimmed){ showToast("Iltimos, avval o'sha kun haqida bir necha jumla yozing.", 'error'); return; }
   if(!currentUser) return;
-  const today = todayISO();
-  setDoc(doc(db, 'users', currentUser.uid, 'journal', today), {
+  setDoc(doc(db, 'users', currentUser.uid, 'journal', targetDate), {
     mood, sleep, text: trimmed, updatedAt: serverTimestamp()
   }, { merge: true })
     .then(() => showToast("Kundalik saqlandi", 'success'))
@@ -577,6 +579,78 @@ function deleteJournalEntry(id){
 function formatEntryDate(iso){
   const d = new Date(iso + 'T00:00:00');
   return d.toLocaleDateString('uz-UZ', { day: 'numeric', month: 'long', weekday: 'long' });
+}
+
+// O'sha sana uchun label: "Bugun", "Kecha" yoki to'liq sana
+function formatEditingForLabel(dateKey){
+  if(dateKey === todayISO()) return "Bugungi kun uchun yozyapsiz";
+  const yesterday = isoDate(new Date(Date.now() - 86400000));
+  if(dateKey === yesterday) return "Kecha uchun yozyapsiz";
+  return formatEntryDate(dateKey) + " uchun yozyapsiz";
+}
+
+// Tanlangan sanani UI'ga qo'llash: chip'larni belgilash, mavjud yozuvni yuklash
+function applyJournalDateSelection(dateKey){
+  journalSelectedDate = dateKey;
+
+  // Chip holatini yangilash
+  const today = todayISO();
+  document.querySelectorAll('#journal-date-chips .date-chip').forEach(chip => {
+    const offset = Number(chip.dataset.offset);
+    const d = new Date();
+    d.setDate(d.getDate() - offset);
+    chip.classList.toggle('active', isoDate(d) === dateKey);
+  });
+  const customInput = document.getElementById('journal-custom-date');
+  if(customInput) customInput.value = (dateKey === today) ? '' : dateKey;
+
+  const labelEl = document.getElementById('editing-for-label');
+  if(labelEl) labelEl.textContent = formatEditingForLabel(dateKey);
+
+  // Mavjud yozuv bo'lsa — yuklab qo'yamiz, bo'lmasa standart qiymatlarga qaytaramiz
+  const existing = state.journal.find(e => e.date === dateKey);
+  const moodVal = existing ? existing.mood : 7;
+  const sleepVal = existing ? existing.sleep : 6;
+  const textVal = existing ? existing.text : '';
+
+  const moodSlider = document.querySelector('#view-kundalik .sliders-row .slider-block:nth-child(1) input[type=range]');
+  const sleepSlider = document.querySelector('#view-kundalik .sliders-row .slider-block:nth-child(2) input[type=range]');
+  if(moodSlider){ moodSlider.value = moodVal; document.getElementById('j-mood-val').textContent = moodVal; }
+  if(sleepSlider){ sleepSlider.value = sleepVal; document.getElementById('j-sleep-val').textContent = sleepVal; }
+  const textarea = document.getElementById('journal-textarea');
+  if(textarea) textarea.value = textVal;
+}
+
+// So'nggi N kun ichida kundalik yozuvi yo'q kunlarni topadi (bugundan tashqari)
+function renderMissedDaysBanner(){
+  const banner = document.getElementById('missed-days-banner');
+  const chipsEl = document.getElementById('missed-days-chips');
+  if(!banner || !chipsEl) return;
+
+  const today = todayISO();
+  const recentDates = lastNDates(7).map(isoDate).filter(k => k !== today);
+  const journalDates = new Set(state.journal.map(e => e.date));
+  const missing = recentDates.filter(k => !journalDates.has(k)).reverse(); // eng yaqin kun birinchi
+
+  if(missing.length === 0){
+    banner.style.display = 'none';
+    return;
+  }
+  banner.style.display = 'flex';
+  chipsEl.innerHTML = missing.map(k => {
+    const yesterday = isoDate(new Date(Date.now() - 86400000));
+    const label = k === yesterday ? 'Kecha' : new Date(k + 'T00:00:00').toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short' });
+    return `<button type="button" class="missed-chip" onclick="selectJournalDateAndFocus('${k}')">${label}</button>`;
+  }).join('');
+}
+
+// Unutilgan kun chipini bosganda — sanani tanlab, yozuv qismiga scroll qilamiz
+function selectJournalDateAndFocus(dateKey){
+  applyJournalDateSelection(dateKey);
+  const card = document.querySelector('.journal-editor');
+  if(card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const textarea = document.getElementById('journal-textarea');
+  if(textarea) setTimeout(() => textarea.focus(), 350);
 }
 
 function renderJournal(){
@@ -611,6 +685,8 @@ function renderJournal(){
       moodAvgEl.textContent = avg.toFixed(1);
     }
   }
+
+  renderMissedDaysBanner();
 }
 
 
@@ -621,8 +697,9 @@ function wireJournalForms(){
       const mood = document.getElementById('j-mood-val').textContent;
       const sleep = document.getElementById('j-sleep-val').textContent;
       const text = document.getElementById('journal-textarea').value;
-      saveJournalEntry(Number(mood), Number(sleep), text);
+      saveJournalEntry(Number(mood), Number(sleep), text, journalSelectedDate);
       document.getElementById('journal-textarea').value = '';
+      applyJournalDateSelection(todayISO());
     };
   }
   const dashSaveBtn = document.getElementById('dash-save-btn');
@@ -631,11 +708,32 @@ function wireJournalForms(){
       const mood = document.getElementById('mood-val').textContent;
       const sleep = document.getElementById('sleep-val').textContent;
       const text = document.getElementById('dash-journal-textarea').value;
-      saveJournalEntry(Number(mood), Number(sleep), text);
+      saveJournalEntry(Number(mood), Number(sleep), text, todayISO());
       document.getElementById('dash-journal-textarea').value = '';
       showView('kundalik');
     };
   }
+
+  // Sana chip'lari (Bugun / Kecha / 2 kun oldin)
+  document.querySelectorAll('#journal-date-chips .date-chip').forEach(chip => {
+    chip.onclick = () => {
+      const offset = Number(chip.dataset.offset);
+      const d = new Date();
+      d.setDate(d.getDate() - offset);
+      applyJournalDateSelection(isoDate(d));
+    };
+  });
+
+  // Erkin sana tanlash (kalendar)
+  const customInput = document.getElementById('journal-custom-date');
+  if(customInput){
+    customInput.max = todayISO();
+    customInput.onchange = () => {
+      if(customInput.value) applyJournalDateSelection(customInput.value);
+    };
+  }
+
+  applyJournalDateSelection(todayISO());
 }
 
 // =====================================================
@@ -782,6 +880,33 @@ if('serviceWorker' in navigator){
     navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW registration failed', err));
   });
 }
+
+// =====================================================
+// OFLAYN HOLAT — banner + toast bilan xabar berish
+// (Firestore'ning persistentLocalCache'i o'zgarishlarni allaqachon
+//  navbatga qo'yadi, bu qism faqat foydalanuvchiga holatni ko'rsatadi)
+// =====================================================
+let wasOffline = !navigator.onLine;
+
+function updateOnlineStatusUI(showToastMsg){
+  const banner = document.getElementById('offline-banner');
+  const isOffline = !navigator.onLine;
+  document.body.classList.toggle('is-offline', isOffline);
+  if(banner) banner.style.display = isOffline ? 'flex' : 'none';
+
+  if(showToastMsg){
+    if(isOffline){
+      showToast("Internet aloqasi yo'q — o'zgarishlaringiz saqlanadi va qayta ulanganda yuboriladi", 'error');
+    }else if(wasOffline){
+      showToast("Internetga qayta ulandingiz — sinxronlanmoqda", 'success');
+    }
+  }
+  wasOffline = isOffline;
+}
+
+window.addEventListener('online', () => updateOnlineStatusUI(true));
+window.addEventListener('offline', () => updateOnlineStatusUI(true));
+updateOnlineStatusUI(false);
 
 // =====================================================
 // UX YORDAMCHILARI: toast, tasdiqlash oynasi, haptika, streak bayrami
@@ -986,5 +1111,5 @@ Object.assign(window, {
   cycleStatus, addHabit, deleteHabit, renameHabit, editHabitName, moveHabit, changeWeek,
   addGoal, deleteGoal, updateGoalPercent, renameGoalField, toggleAddGoalForm, makeGoalEditable,
   deleteJournalEntry, editProfileName, saveProfileName, copyCardNumber, installApp, clearCache,
-  acceptConfirm, cancelConfirm, closeIosInstallInfo, toggleNotifPref
+  acceptConfirm, cancelConfirm, closeIosInstallInfo, toggleNotifPref, selectJournalDateAndFocus
 });
